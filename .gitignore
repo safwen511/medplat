@@ -1,0 +1,34 @@
+# Python environment
+.venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Source PDFs
+pdfsrc/
+
+# Generated parsing results
+data/processed/
+data/reports/
+data/derived/
+
+# Local Docling model artifacts
+data/docling-models/
+.docling-models/
+
+# Logs and system files
+*.log
+.DS_Store
+
+*.egg-info/

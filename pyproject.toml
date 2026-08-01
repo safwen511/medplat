@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medplat-ingestion"
+version = "0.1.0"
+description = "Local medical PDF inspection and parsing pipeline"
+requires-python = ">=3.10"
+dependencies = [
+    "docling",
+    "pymupdf",
+    "pydantic",
+    "typer",
+    "rich",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+medparse = "ingestion.cli:app"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+packages = ["ingestion"]
+
+[[tool.mypy.overrides]]
+module = [
+    "docling",
+    "docling.*",
+    "docling_core",
+    "docling_core.*",
+    "fitz",
+    "pymupdf",
+    "numpy",
+    "numpy.*",
+]
+follow_imports = "skip"
