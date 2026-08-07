@@ -17,11 +17,20 @@ htmlcov/
 
 # Source PDFs
 pdfsrc/
+yahyaouisalsa/
 
 # Generated parsing results
 data/processed/
 data/reports/
 data/derived/
+data/generated/
+data/generated-failures/
+data/courses/
+data/yahyaouisalsa-text/
+data/reports/yahyaouisalsa-text/
+data/yahyaouisalsa-clean/
+data/yahyaouisalsa-reconstructed/
+data/reports/yahyaouisalsa-preparation/
 
 # Local Docling model artifacts
 data/docling-models/

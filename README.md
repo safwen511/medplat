@@ -1,8 +1,9 @@
 # MedPlat local document ingestion
 
 This repository provides local, read-only document inspection, structured normalization, explicit
-OCR derivatives, deterministic chunking, and AI-ready dataset packaging. It does not implement
-cloud integrations, AI content generation, embeddings, or the website.
+OCR derivatives, deterministic chunking, AI-ready dataset packaging, and source-grounded draft QCM
+generation through a loopback-only Ollama service. It does not implement cloud integrations,
+embeddings, automated medical validation, or the website.
 
 Structured parsing supports PDF, PPTX, and DOCX through Docling. PDF navigation and coordinates are
 enriched with PyMuPDF. Other formats remain visible to inspection and are marked
@@ -34,6 +35,24 @@ See [docs/docling-models.md](docs/docling-models.md) for expected directory sema
 remediation.
 
 ## Commands
+
+Plan a complete mirrored UTF-8 text export from the filtered `yahyaouisalsa` course tree without
+creating files or initializing Docling:
+
+```bash
+medparse extract-text-tree \
+  --input yahyaouisalsa \
+  --output data/yahyaouisalsa-text \
+  --report-output data/reports/yahyaouisalsa-text \
+  --docling-artifacts-path data/docling-models \
+  --resume --jobs 1 --dry-run
+```
+
+Remove `--dry-run` only after reviewing the plan. The command mirrors every source directory,
+hashes every source file, and writes `.txt` only for `exported` or
+`exported_with_warnings` entries. Scanned PDFs without an exact validated accepted derivative are
+reported as `requires_ocr`; OCR is never invoked. Legacy `.ppt`, `.ppsx`, and image files remain
+visible as unsupported. See [docs/text-tree-extraction.md](docs/text-tree-extraction.md).
 
 Plan or dry-run a controlled representative batch without parsing documents:
 
@@ -138,7 +157,63 @@ medparse validate-dataset data/processed/<sha256>/datasets/ai-ready-dataset.json
 Chunk and dataset outputs are protected from overwrite. Use `--force` only for an intentional,
 atomic rebuild.
 
+Plan five source-only French QCM drafts without contacting Ollama or writing output:
+
+```bash
+medparse plan-generation data/processed/<sha256>/datasets/ai-ready-dataset.json \
+  --model qwen2.5:7b --content-type qcm --count 5 --qcm-type single_answer \
+  --language fr --difficulty mixed --knowledge-mode source_only
+```
+
+The real `generate-content` command uses the same options and contacts only a configured local
+loopback Ollama endpoint. It never installs or pulls a model. See
+[docs/generation.md](docs/generation.md) and [docs/ollama.md](docs/ollama.md).
+
+Build a folder-aware course catalog from the validated dataset and seed its QCM coverage ledger
+from existing finalized drafts:
+
+```bash
+medparse build-course-catalog \
+  data/processed/<sha256>/datasets/ai-ready-dataset.json \
+  --course-name "Cancer du rein"
+```
+
+Plan the next five QCMs from pending knowledge units without contacting Ollama or writing a plan:
+
+```bash
+medparse plan-course-qcm data/courses/<course-id> --count 5
+```
+
+Folder names and section paths provide curriculum taxonomy only; claims still require exact source
+evidence. See [docs/courses.md](docs/courses.md).
+
 ## Output
+
+Mirrored text exports are independent of canonical ingestion outputs and live under
+`data/yahyaouisalsa-text/`. Their state is recorded in `export-manifest.json`, with concise run
+reports under `data/reports/yahyaouisalsa-text/<run-id>/`. Directory or file presence never proves
+success; resume validates the source identity, metadata header, schema, navigation separators, and
+output SHA-256.
+
+Prepare the complete mirrored text tree as conservative clean text followed by optional local,
+source-constrained reconstruction:
+
+```bash
+medparse prepare-course-text-tree \
+  --input data/yahyaouisalsa-text \
+  --clean-output data/yahyaouisalsa-clean \
+  --reconstructed-output data/yahyaouisalsa-reconstructed \
+  --generator-model gemma3:12b \
+  --reviewer-model auto-medgemma-4b \
+  --location-markers compact \
+  --resume \
+  --jobs 1
+```
+
+The clean and reconstructed trees mirror the export hierarchy. Internal provenance, transformations,
+readiness, model identities, and validation issues remain in JSON sidecars rather than the readable
+course text. This command does not generate study material. See
+[docs/course-text-preparation.md](docs/course-text-preparation.md).
 
 Successful results are written outside `pdfsrc` under `data/processed/<sha256>/`. `document.json` is
 the canonical versioned model, `document.md` is a human-readable inspection view, and
@@ -165,3 +240,7 @@ output paths. See [docs/normalization.md](docs/normalization.md) for normalizati
   questions, answers, or other interpreted concepts.
 - Assets without explicit, caption, unique-location, or reliable spatial evidence remain
   unassociated rather than being forced into a chunk.
+- Only QCM generation is enabled. All generated questions remain draft/unreviewed until explicit
+  human review; grounding validation is technical and does not prove medical correctness.
+- Course planning currently inventories and plans QCM coverage only. It does not yet execute a
+  course plan or generate quizzes, flashcards, summaries, objectives, or clinical cases.

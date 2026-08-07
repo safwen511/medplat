@@ -183,3 +183,15 @@ def write_json_atomic(path: Path, payload: object) -> None:
     finally:
         if temporary.exists():
             temporary.unlink()
+
+
+def write_text_atomic(path: Path, value: str) -> None:
+    """Write one UTF-8 text export through a same-directory temporary file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{uuid4().hex}.tmp")
+    try:
+        temporary.write_text(value, encoding="utf-8", newline="\n")
+        temporary.replace(path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
