@@ -1,7 +1,9 @@
-"""Convert legacy PowerPoint sources (.ppt, .ppsx) to .pptx derivatives and export their text.
+"""Convert legacy Office sources (.ppt, .ppsx, .doc) to OOXML derivatives and export their text.
 
 The read-only source is copied to a temporary directory and converted there with LibreOffice
-headless; the source tree is never written. Each derivative is content-addressed under
+headless (.ppt/.ppsx -> .pptx, .doc -> .docx); the source tree is never written. Legacy files are
+discovered directly in library/<year>, so this can run before the inventory exists. Each
+derivative is content-addressed under
 data/<year>/office/<source-sha256>/ with a provenance record, then extracted with the project's
 existing Docling Office route (no PDF models, no OCR). Text exports are written in the standard
 mirrored format under data/<year>/text-office/, keeping the original source-relative path,
@@ -11,7 +13,6 @@ extension, and SHA-256 in the header. Usage: python scripts/convert_legacy_offic
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import subprocess
 import sys
@@ -28,7 +29,8 @@ from ingestion.text_tree.extraction import LocalTextExtractor
 from ingestion.text_tree.models import ExportStatus
 from ingestion.text_tree.rendering import render_export
 
-LEGACY_EXTENSIONS = {".ppt", ".ppsx"}
+# Legacy extension -> OOXML format LibreOffice converts it to.
+LEGACY_TARGETS = {".ppt": "pptx", ".ppsx": "pptx", ".doc": "docx"}
 
 
 def libreoffice_version() -> str:
@@ -36,7 +38,7 @@ def libreoffice_version() -> str:
     return result.stdout.strip()
 
 
-def convert(source: Path, workdir: Path) -> Path:
+def convert(source: Path, workdir: Path, target: str) -> Path:
     staged = workdir / f"source{source.suffix.lower()}"
     shutil.copyfile(source, staged)
     subprocess.run(
@@ -45,7 +47,7 @@ def convert(source: Path, workdir: Path) -> Path:
             "--headless",
             f"-env:UserInstallation=file://{workdir / 'profile'}",
             "--convert-to",
-            "pptx",
+            target,
             "--outdir",
             str(workdir / "out"),
             str(staged),
@@ -55,26 +57,26 @@ def convert(source: Path, workdir: Path) -> Path:
         check=True,
         timeout=300,
     )
-    converted = workdir / "out" / "source.pptx"
+    converted = workdir / "out" / f"source.{target}"
     if not converted.is_file():
-        raise RuntimeError("LibreOffice produced no .pptx output.")
+        raise RuntimeError(f"LibreOffice produced no .{target} output.")
     return converted
 
 
 def main(year: Year) -> int:
     source_root, derived_root, text_root = year.source, year.office, year.text_office
-    inventory = year.catalog / "inventory.json"
-    records = json.loads(inventory.read_text(encoding="utf-8"))["records"]
-    legacy = [r for r in records if r["extension"].lower() in LEGACY_EXTENSIONS]
+    legacy = sorted(
+        path.relative_to(source_root).as_posix()
+        for path in source_root.rglob("*")
+        if path.is_file() and path.suffix.lower() in LEGACY_TARGETS
+    )
     version = libreoffice_version()
     extractor = LocalTextExtractor(DoclingSettings.from_sources())
     manifest = []
-    for record in legacy:
-        relative_path = record["source_relative_path"]
+    for relative_path in legacy:
         source = source_root / relative_path
         source_sha = sha256_file(source)
-        if source_sha != record["source_sha256"]:
-            raise RuntimeError(f"Source hash changed since inventory: {relative_path}")
+        target = LEGACY_TARGETS[source.suffix.lower()]
         entry: dict[str, object] = {
             "source_relative_path": relative_path,
             "source_sha256": source_sha,
@@ -82,12 +84,12 @@ def main(year: Year) -> int:
         }
         try:
             target_dir = derived_root / source_sha
-            derivative = target_dir / "derivative.pptx"
+            derivative = target_dir / f"derivative.{target}"
             if not derivative.is_file():
                 with tempfile.TemporaryDirectory(prefix="medplat-office-") as tmp:
-                    converted = convert(source, Path(tmp))
+                    converted = convert(source, Path(tmp), target)
                     target_dir.mkdir(parents=True, exist_ok=True)
-                    partial = target_dir / "derivative.pptx.partial"
+                    partial = target_dir / f"derivative.{target}.partial"
                     shutil.copyfile(converted, partial)
                     partial.replace(derivative)
             derivative_sha = sha256_file(derivative)
@@ -97,17 +99,17 @@ def main(year: Year) -> int:
                     "source_relative_path": relative_path,
                     "source_sha256": source_sha,
                     "source_extension": source.suffix,
-                    "derivative_file": "derivative.pptx",
+                    "derivative_file": derivative.name,
                     "derivative_sha256": derivative_sha,
                     "tool": version,
-                    "operation": "soffice --headless --convert-to pptx",
+                    "operation": f"soffice --headless --convert-to {target}",
                 },
             )
             result = extractor.extract(
                 DiscoveredSource(
                     path=derivative,
                     relative_path=relative_path,
-                    extension=".pptx",
+                    extension=f".{target}",
                     size_bytes=derivative.stat().st_size,
                     sha256=source_sha,
                 ),
@@ -115,7 +117,7 @@ def main(year: Year) -> int:
                 pdf_inspection=None,
                 accepted_derivative=None,
                 derivative_warnings=(
-                    f"Extracted from a LibreOffice .pptx derivative (sha256 {derivative_sha}).",
+                    f"Extracted from a LibreOffice .{target} derivative (sha256 {derivative_sha}).",
                 ),
             )
             entry.update(status=result.status.value, errors=list(result.errors))
@@ -131,7 +133,9 @@ def main(year: Year) -> int:
                         source_sha256=source_sha,
                         document_type=result.document_type,
                         status=result.status,
-                        extraction_tool=f"libreoffice-pptx-derivative+{result.extraction_tool}",
+                        extraction_tool=(
+                            f"libreoffice-{target}-derivative+{result.extraction_tool}"
+                        ),
                         exported_at=datetime.now(timezone.utc),
                         body=result.body,
                     ),
