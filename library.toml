@@ -1,0 +1,15 @@
+# Course libraries, one entry per study year. Originals live read-only under library/<id>/;
+# everything derived from them is written under data/<id>/ (see src/ingestion/library.py).
+
+[models]
+docling = "data/models/docling"
+
+[years.dcem1]
+label = "DCEM1 — 3e année"
+faculty = "Faculté de Médecine de Sfax"
+source = "library/dcem1"
+
+[years.dcem2]
+label = "DCEM2 — 4e année"
+faculty = "Faculté de Médecine de Sfax"
+source = "library/dcem2"

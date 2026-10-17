@@ -10,7 +10,7 @@ The installed and verified command belongs to Docling 2.117.0:
 
 ```bash
 docling-tools models download \
-  --output-dir "$PWD/data/docling-models" \
+  --output-dir "$PWD/data/models/docling" \
   layout tableformer
 ```
 
@@ -22,7 +22,7 @@ It is never run by tests, application startup, environment diagnostics, or docum
 Set an absolute artifact root:
 
 ```bash
-export DOCLING_ARTIFACTS_PATH="$PWD/data/docling-models"
+export DOCLING_ARTIFACTS_PATH="$PWD/data/models/docling"
 ```
 
 For one invocation, `parse-document --docling-artifacts-path PATH` takes precedence over the

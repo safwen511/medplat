@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "medplat-ingestion"
 version = "0.1.0"
-description = "Local medical PDF inspection and parsing pipeline"
-requires-python = ">=3.10"
+description = "MedPlat: course-library extraction, cataloging, and source-grounded lesson pipeline"
+requires-python = ">=3.11"
 dependencies = [
     "docling",
     "pymupdf",
@@ -43,7 +43,7 @@ target-version = "py310"
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 strict = true
 packages = ["ingestion"]
 follow_imports_for_stubs = true
@@ -60,3 +60,7 @@ module = [
     "numpy.*",
 ]
 follow_imports = "skip"
+
+[tool.ruff.lint.isort]
+# Python 3.11+ stdlib module; lint target stays py310 to avoid enum/datetime rewrites.
+extra-standard-library = ["tomllib"]

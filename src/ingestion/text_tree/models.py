@@ -37,11 +37,11 @@ class TextExportConfiguration(BaseModel):
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    input_root: Path = Path("yahyaouisalsa")
-    output_root: Path = Path("data/yahyaouisalsa-text")
-    report_output_root: Path = Path("data/reports/yahyaouisalsa-text")
+    input_root: Path = Path("library/dcem1")
+    output_root: Path = Path("data/dcem1/text")
+    report_output_root: Path = Path("data/dcem1/reports/text-export")
     docling_artifacts_path: Path | None = None
-    derived_root: Path = Path("data/derived")
+    derived_root: Path = Path("data/dcem1/ocr")
     resume: bool = False
     overwrite: bool = False
     dry_run: bool = False

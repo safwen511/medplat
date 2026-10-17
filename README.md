@@ -1,246 +1,82 @@
-# MedPlat local document ingestion
+# MedPlat
 
-This repository provides local, read-only document inspection, structured normalization, explicit
-OCR derivatives, deterministic chunking, AI-ready dataset packaging, and source-grounded draft QCM
-generation through a loopback-only Ollama service. It does not implement cloud integrations,
-embeddings, automated medical validation, or the website.
+Turns Tunisian medical-school course libraries (Faculté de Médecine de Sfax, per study year) into
+source-grounded lessons and exercises for a student revision website.
 
-Structured parsing supports PDF, PPTX, and DOCX through Docling. PDF navigation and coordinates are
-enriched with PyMuPDF. Other formats remain visible to inspection and are marked
-`unsupported_for_parsing`; legacy `.ppt` and `.doc` files are never parsed.
+Pipeline, per year:
 
-PDF parsing is local-only and requires an explicit Docling model artifact root. PPTX and DOCX do not
-require these PDF models.
+1. **Extract** — mirror every original file to UTF-8 text with page/slide separators (Docling +
+   PyMuPDF; LibreOffice for legacy `.ppt`/`.ppsx`; explicit local OCR derivatives).
+2. **Catalog** — inventory every file with a text-quality score, then classify files into
+   pole → certif → module → lesson, with source roles (official slides, polycopié, student summary…).
+3. **Reconstruct** — rebuild each lesson from its sources only, every statement citing its source
+   page (`[S1 p.10]`), checked by a deterministic grounding validator.
+4. **Generate** *(next)* — exercises (QCM, QRM, vrai/faux, …) from validated lessons.
+5. **Website** *(next)* — static site plus a lesson-grounded chatbot.
 
-## Local PDF model setup
+Everything generated is a draft until a human medical reviewer accepts it. The validator checks
+traceability (citations, cited pages, numbers), never medical correctness.
 
-Docling 2.117.0 provides the official model helper. Download only the layout and TableFormer models;
-OCR models are intentionally excluded:
+## Layout
 
-```bash
-docling-tools models download \
-  --output-dir "$PWD/data/docling-models" \
-  layout tableformer
-export DOCLING_ARTIFACTS_PATH="$PWD/data/docling-models"
+```
+library.toml          years: id, label, source folder; Docling model path
+library/<year>/       original course files, read-only, Git-ignored
+data/<year>/          everything derived, Git-ignored
+  text/               mirrored text exports (+ export-manifest.json)
+  text-office/        text of legacy .ppt/.ppsx via .pptx derivatives
+  office/             LibreOffice derivatives, content-addressed by source SHA-256
+  ocr/                OCR derivatives, content-addressed
+  reports/            extraction run reports
+  catalog/            inventory, per-certif classification, catalog.json
+  lessons/<id>/       lesson.md + lesson.json
+data/models/docling/  local Docling layout/table models
+src/ingestion/        extraction library and `medparse` CLI
+scripts/              catalog and lesson stages
+docs/                 stage specifications
 ```
 
-The project-local destination is Git-ignored. A different absolute destination is also valid. Check
-the environment without parsing a document or downloading anything:
+Configured years: `dcem1` (3e année) and `dcem2` (4e année).
+
+## Setup
 
 ```bash
-medparse check-environment
+python -m venv .venv && .venv/bin/pip install -e '.[dev]'
+docling-tools models download --output-dir "$PWD/data/models/docling" layout tableformer
+medparse check-environment --docling-artifacts-path data/models/docling
 ```
 
-See [docs/docling-models.md](docs/docling-models.md) for expected directory semantics and error
-remediation.
+LibreOffice (`soffice`) is needed for legacy Office conversion; OCRmyPDF and Tesseract for OCR.
 
 ## Commands
 
-Plan a complete mirrored UTF-8 text export from the filtered `yahyaouisalsa` course tree without
-creating files or initializing Docling:
-
 ```bash
-medparse extract-text-tree \
-  --input yahyaouisalsa \
-  --output data/yahyaouisalsa-text \
-  --report-output data/reports/yahyaouisalsa-text \
-  --docling-artifacts-path data/docling-models \
-  --resume --jobs 1 --dry-run
+# 1. Extract (review the dry run first; --resume skips validated outputs)
+medparse extract-text-tree --year dcem2 --dry-run
+medparse extract-text-tree --year dcem2 --resume
+python scripts/convert_legacy_office.py --year dcem2   # after the inventory exists
+
+# 2. Catalog
+python scripts/build_inventory.py --year dcem2
+python scripts/merge_catalog.py --year dcem2           # after data/dcem2/catalog/certifs/*.json
+
+# 3. Validate a reconstructed lesson
+python scripts/validate_lesson.py data/dcem1/lessons/<lesson_id>
 ```
 
-Remove `--dry-run` only after reviewing the plan. The command mirrors every source directory,
-hashes every source file, and writes `.txt` only for `exported` or
-`exported_with_warnings` entries. Scanned PDFs without an exact validated accepted derivative are
-reported as `requires_ocr`; OCR is never invoked. Legacy `.ppt`, `.ppsx`, and image files remain
-visible as unsupported. See [docs/text-tree-extraction.md](docs/text-tree-extraction.md).
+Other `medparse` commands: `inspect-library`, `inspect-document`, `parse-document`,
+`parse-sample`, `validate-output`, `check-ocr-environment`, `evaluate-ocr`,
+`create-ocr-derivative`, `validate-derivative`, `parse-ocr-derivative`.
 
-Plan or dry-run a controlled representative batch without parsing documents:
+The previous local-Ollama pipeline (chunking, datasets, batch processing, QCM drafting) is kept
+in Git history under the tag `archive/local-pipeline`.
 
-```bash
-medparse plan-library --input pdfsrc --limit 10 --selection representative \
-  --enable-ocr --ocr-languages fra
-medparse process-library --input pdfsrc --output data/processed \
-  --derived-output data/derived --limit 10 --selection representative \
-  --jobs 1 --resume --enable-ocr --ocr-languages fra --dry-run
-```
-
-Batch execution is sequential and accepts only `--jobs 1`. OCR is disabled unless explicitly
-enabled, and force OCR additionally requires `--allow-force-ocr`. Existing output is reused only
-after schema, source-hash, provenance, suitability, chunk, and dataset validation. See
-[docs/batch-processing.md](docs/batch-processing.md).
-
-Check local OCR tools and explicitly evaluate one PDF without creating output:
+## Checks
 
 ```bash
-medparse check-ocr-environment --languages fra
-medparse evaluate-ocr "pdfsrc/path/to/selected.pdf"
+ruff check . && ruff format --check . && mypy src/ingestion && pytest
 ```
 
-Create and validate a safe skip-text derivative, then parse it only when accepted:
-
-```bash
-medparse create-ocr-derivative "pdfsrc/path/to/selected.pdf" \
-  --languages fra --output data/derived
-medparse validate-derivative data/derived/<source-sha>/ocr/<derivative-id>/derivative.json
-medparse parse-ocr-derivative \
-  data/derived/<source-sha>/ocr/<derivative-id>/derivative.json \
-  --output data/processed
-```
-
-Canonical OCR variants are isolated under
-`data/processed/<source-sha>/variants/<processing-variant-id>/`. See
-[docs/ocr.md](docs/ocr.md).
-
-Inspect without structured parsing:
-
-```bash
-medparse inspect-document pdfsrc/path/to/document.pdf
-medparse inspect-library --input pdfsrc --output data/reports --limit 10
-```
-
-Safely normalize one selected source:
-
-```bash
-medparse parse-document "pdfsrc/path/to/selected-document.pdf" --output data/processed
-```
-
-An explicit CLI path overrides the environment for that invocation:
-
-```bash
-medparse parse-document "pdfsrc/path/to/selected-document.pdf" \
-  --docling-artifacts-path /absolute/path/to/docling-model-artifacts
-```
-
-Asset extraction and PDF previews are opt-in. Existing successful output is protected unless
-`--force` is supplied:
-
-```bash
-medparse parse-document "pdfsrc/path/to/selected-document.pdf" \
-  --output data/processed --extract-assets --render-previews
-```
-
-Select and normalize at most three representative real documents. `--input` is mandatory:
-
-```bash
-medparse parse-sample --input pdfsrc --output data/processed --limit 3
-```
-
-Limits above three require the explicit `--allow-large-batch` acknowledgement. Individual failures
-do not stop the batch, and `batch-processing-report.json` records every result.
-
-Validate canonical output:
-
-```bash
-medparse validate-output data/processed/<sha256>/document.json
-```
-
-Build deterministic chunks from validated canonical JSON only:
-
-```bash
-medparse build-chunks data/processed/<sha256>/document.json
-medparse validate-chunks data/processed/<sha256>/chunks/chunks.json
-```
-
-Inspect one chunk without reading the raw source document:
-
-```bash
-medparse inspect-chunk data/processed/<sha256>/chunks/chunks.json <chunk-id>
-```
-
-Build and validate the AI-ready dataset package:
-
-```bash
-medparse build-dataset data/processed/<sha256>/document.json
-medparse validate-dataset data/processed/<sha256>/datasets/ai-ready-dataset.json
-```
-
-Chunk and dataset outputs are protected from overwrite. Use `--force` only for an intentional,
-atomic rebuild.
-
-Plan five source-only French QCM drafts without contacting Ollama or writing output:
-
-```bash
-medparse plan-generation data/processed/<sha256>/datasets/ai-ready-dataset.json \
-  --model qwen2.5:7b --content-type qcm --count 5 --qcm-type single_answer \
-  --language fr --difficulty mixed --knowledge-mode source_only
-```
-
-The real `generate-content` command uses the same options and contacts only a configured local
-loopback Ollama endpoint. It never installs or pulls a model. See
-[docs/generation.md](docs/generation.md) and [docs/ollama.md](docs/ollama.md).
-
-Build a folder-aware course catalog from the validated dataset and seed its QCM coverage ledger
-from existing finalized drafts:
-
-```bash
-medparse build-course-catalog \
-  data/processed/<sha256>/datasets/ai-ready-dataset.json \
-  --course-name "Cancer du rein"
-```
-
-Plan the next five QCMs from pending knowledge units without contacting Ollama or writing a plan:
-
-```bash
-medparse plan-course-qcm data/courses/<course-id> --count 5
-```
-
-Folder names and section paths provide curriculum taxonomy only; claims still require exact source
-evidence. See [docs/courses.md](docs/courses.md).
-
-## Output
-
-Mirrored text exports are independent of canonical ingestion outputs and live under
-`data/yahyaouisalsa-text/`. Their state is recorded in `export-manifest.json`, with concise run
-reports under `data/reports/yahyaouisalsa-text/<run-id>/`. Directory or file presence never proves
-success; resume validates the source identity, metadata header, schema, navigation separators, and
-output SHA-256.
-
-Prepare the complete mirrored text tree as conservative clean text followed by optional local,
-source-constrained reconstruction:
-
-```bash
-medparse prepare-course-text-tree \
-  --input data/yahyaouisalsa-text \
-  --clean-output data/yahyaouisalsa-clean \
-  --reconstructed-output data/yahyaouisalsa-reconstructed \
-  --generator-model gemma3:12b \
-  --reviewer-model auto-medgemma-4b \
-  --location-markers compact \
-  --resume \
-  --jobs 1
-```
-
-The clean and reconstructed trees mirror the export hierarchy. Internal provenance, transformations,
-readiness, model identities, and validation issues remain in JSON sidecars rather than the readable
-course text. This command does not generate study material. See
-[docs/course-text-preparation.md](docs/course-text-preparation.md).
-
-Successful results are written outside `pdfsrc` under `data/processed/<sha256>/`. `document.json` is
-the canonical versioned model, `document.md` is a human-readable inspection view, and
-`processing-report.json` records parser/version, timing, warnings, errors, unsupported features, and
-output paths. See [docs/normalization.md](docs/normalization.md) for normalization,
-[docs/chunking.md](docs/chunking.md) for learning-unit construction, and
-[docs/architecture.md](docs/architecture.md) for system boundaries.
-
-## Known limitations
-
-- OCR never runs automatically. Safe skip-text OCR may produce no improvement on a page that already
-  contains sparse text; force-OCR requires a separate explicit decision.
-- Docling's PDF layout and accurate TableFormer models must already exist at the explicitly
-  configured artifact root. Parsing never downloads them and source content is never sent to an
-  external service.
-- A PDF page with embedded images and fewer than 100 extractable characters is marked as requiring
-  OCR. OCR remains disabled, and such output must not be treated as generation-ready.
-- DOCX has no invented physical pagination.
-- Speaker notes are retained only if Docling exposes them reliably.
-- Asset extraction and preview rendering currently materialize PDF content only.
-- Ambiguous PDF text-coordinate matches deliberately retain text with null coordinates and a
-  warning.
-- Chunking is structural rather than medical-semantic: it does not identify diagnoses, treatments,
-  questions, answers, or other interpreted concepts.
-- Assets without explicit, caption, unique-location, or reliable spatial evidence remain
-  unassociated rather than being forced into a chunk.
-- Only QCM generation is enabled. All generated questions remain draft/unreviewed until explicit
-  human review; grounding validation is technical and does not prove medical correctness.
-- Course planning currently inventories and plans QCM coverage only. It does not yet execute a
-  course plan or generate quizzes, flashcards, summaries, objectives, or clinical cases.
+See [docs/text-tree-extraction.md](docs/text-tree-extraction.md),
+[docs/catalog-classification.md](docs/catalog-classification.md),
+[docs/ocr.md](docs/ocr.md), and [docs/docling-models.md](docs/docling-models.md).

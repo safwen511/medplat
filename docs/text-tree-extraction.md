@@ -20,15 +20,12 @@ Only `exported` and `exported_with_warnings` sources create `.txt` files. `requi
 
 ## Planning and execution
 
-Run a zero-write full-tree plan:
+Run a zero-write full-tree plan. `--year` resolves `library/<year>`, `data/<year>/text`,
+`data/<year>/reports/text-export`, and `data/<year>/ocr` from `library.toml`; the Docling root
+comes from `--docling-artifacts-path`, `DOCLING_ARTIFACTS_PATH`, or `[models] docling`:
 
 ```bash
-medparse extract-text-tree \
-  --input yahyaouisalsa \
-  --output data/yahyaouisalsa-text \
-  --report-output data/reports/yahyaouisalsa-text \
-  --docling-artifacts-path data/docling-models \
-  --resume --jobs 1 --dry-run
+medparse extract-text-tree --year <year> --resume --jobs 1 --dry-run
 ```
 
 Dry-run performs deterministic discovery and hashing plus the minimum PyMuPDF PDF inspection needed
@@ -38,12 +35,7 @@ content, invoke OCR, create directories, or write manifests or reports.
 After reviewing the plan, the corresponding real command is:
 
 ```bash
-medparse extract-text-tree \
-  --input yahyaouisalsa \
-  --output data/yahyaouisalsa-text \
-  --report-output data/reports/yahyaouisalsa-text \
-  --docling-artifacts-path data/docling-models \
-  --resume --jobs 1
+medparse extract-text-tree --year <year> --resume --jobs 1
 ```
 
 `--limit` selects the first deterministic supported candidates after complete discovery.
@@ -71,8 +63,8 @@ Medical text is never summarized, interpreted, corrected, or supplemented.
 Successful output mirrors the source path and changes only its final extension:
 
 ```text
-yahyaouisalsa/Pole A/Urologie/Cancer du rein.pdf
-data/yahyaouisalsa-text/Pole A/Urologie/Cancer du rein.txt
+library/<year>/Pole A/Urologie/Cancer du rein.pdf
+data/<year>/text/Pole A/Urologie/Cancer du rein.txt
 ```
 
 If supported files in one folder map to the same name, every member receives a deterministic
@@ -85,13 +77,13 @@ text, navigation separators, and root containment.
 The state manifest is:
 
 ```text
-data/yahyaouisalsa-text/export-manifest.json
+data/<year>/text/export-manifest.json
 ```
 
 Run reports are written to:
 
 ```text
-data/reports/yahyaouisalsa-text/<run-id>/
+data/<year>/reports/text-export/<run-id>/
   run-report.json
   failures.json
   unsupported.json

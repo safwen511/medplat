@@ -10,7 +10,6 @@ import fitz
 import pytest
 from typer.testing import CliRunner
 
-from ingestion.chunking.builder import build_chunk_collection
 from ingestion.cli import app
 from ingestion.hashing import sha256_file
 from ingestion.normalization.models import (
@@ -373,20 +372,6 @@ def canonical_document(*, derivative_quality: str | None = None) -> NormalizedDo
         ],
         processing=ProcessingInformation(parser_name="fixture", parser_version="1"),
     )
-
-
-def test_chunk_gate_and_generation_eligibility() -> None:
-    with pytest.raises(ValueError, match="Rejected OCR"):
-        build_chunk_collection(canonical_document(derivative_quality="no_material_improvement"))
-    collection = build_chunk_collection(canonical_document(derivative_quality="accepted"))
-    meaningful = next(chunk for chunk in collection.chunks if chunk.normalized_text)
-    empty = next(chunk for chunk in collection.chunks if not chunk.normalized_text)
-    assert meaningful.eligible_for_generation is True
-    assert meaningful.character_count < 250
-    assert empty.eligible_for_generation is False
-    assert "uncaptioned_asset_without_explanation" in empty.generation_exclusion_reasons
-    assert collection.processing_statistics.eligible_for_generation == 1
-    assert collection.processing_statistics.excluded_from_generation == 1
 
 
 def test_parse_derivative_preserves_original_provenance(

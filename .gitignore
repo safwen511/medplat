@@ -15,26 +15,14 @@ htmlcov/
 .env.*
 !.env.example
 
-# Source PDFs
-pdfsrc/
+# Original course libraries (read-only, never committed)
+library/
+ala/
 yahyaouisalsa/
+pdfsrc/
 
-# Generated parsing results
-data/processed/
-data/reports/
-data/derived/
-data/generated/
-data/generated-failures/
-data/courses/
-data/yahyaouisalsa-text/
-data/reports/yahyaouisalsa-text/
-data/yahyaouisalsa-clean/
-data/yahyaouisalsa-reconstructed/
-data/reports/yahyaouisalsa-preparation/
-
-# Local Docling model artifacts
-data/docling-models/
-.docling-models/
+# Everything generated: text exports, OCR/office derivatives, catalogs, lessons, models
+data/
 
 # Logs and system files
 *.log
