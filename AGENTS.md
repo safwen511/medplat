@@ -14,7 +14,7 @@ reviewer accepts it.
   `catalog/`, `lessons/`. `data/models/docling/` holds local Docling artifacts.
 - `src/ingestion/`: extraction library and the `medparse` CLI.
 - `scripts/`: catalog and lesson stages (`build_inventory`, `merge_catalog`,
-  `convert_legacy_office`, `validate_lesson`), each taking `--year`.
+  `convert_office`, `validate_lesson`), each taking `--year`.
 - `docs/`: stage specifications. Tests in `tests/`.
 
 `library/` and `data/` are Git-ignored and must never be committed. The former local-Ollama
@@ -24,9 +24,10 @@ pipeline is archived under the Git tag `archive/local-pipeline`; do not restore 
 
 1. **Extract** (`medparse extract-text-tree --year <id>`): mirrors every file of
    `library/<year>` to `data/<year>/text` with validated headers and `===== PAGE n =====` /
-   `===== SLIDE n =====` separators. PDF via local Docling + PyMuPDF; PPTX/DOCX via Docling
-   Office; legacy `.ppt`/`.ppsx` via LibreOffice `.pptx` derivatives
-   (`scripts/convert_legacy_office.py`). Unsupported, empty, and OCR-needing files stay visible in
+   `===== SLIDE n =====` separators. PDF via local Docling + PyMuPDF; PPTX via Docling Office;
+   legacy `.ppt`/`.ppsx` via LibreOffice `.pptx` derivatives and `.doc`/`.docx` via LibreOffice PDF
+   derivatives, so Word content has citable pages (`scripts/convert_office.py`, output in
+   `text-office/`, preferred by the inventory). Unsupported, empty, and OCR-needing files stay visible in
    the manifest with no placeholder output. Sequential, resumable, dry-run first.
 2. **Catalog** (`scripts/build_inventory.py`, then classification into
    `data/<year>/catalog/certifs/*.json`, then `scripts/merge_catalog.py`): every file is classified

@@ -51,7 +51,10 @@ selected successful outputs and cannot be combined with `--resume`.
 - PPTX uses Docling Office parsing and retains slide order, titles, content, lists, tables, and
   reliably exposed speaker notes. Office parsing does not initialize PDF models.
 - DOCX uses Docling Office parsing and retains document reading order, headings, paragraphs, lists,
-  captions, and tables. It does not invent physical page numbers.
+  captions, and tables. It does not invent physical page numbers, so this export is not citable;
+  `scripts/convert_office.py` adds a LibreOffice PDF derivative of every `.doc`/`.docx`, exported
+  through the PDF route into `data/<year>/text-office/`, and the inventory prefers that export.
+  Its pages are those of the LibreOffice rendering.
 - TXT is decoded as UTF-8 or a BOM-declared Unicode encoding, normalized to UTF-8, and has only line
   endings normalized. Invalid unknown encodings fail explicitly.
 

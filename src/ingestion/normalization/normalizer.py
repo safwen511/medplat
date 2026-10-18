@@ -396,9 +396,12 @@ def normalize_docling_document(
         reading_order += 1
         block_id = f"block-{reading_order:06d}"
         number, bounding_box = _provenance(item, document_type)
-        text_value = getattr(item, "text", None)
-        text = str(text_value) if text_value not in {None, ""} else None
         block_type = LABEL_TO_BLOCK[label]
+        text_value = getattr(item, "text", None)
+        if block_type is BlockType.FORMULA and not text_value:
+            # Without formula enrichment Docling leaves formula text empty; keep the raw PDF text.
+            text_value = getattr(item, "orig", None)
+        text = str(text_value) if text_value not in {None, ""} else None
 
         if block_type is BlockType.HEADING:
             level = max(1, int(getattr(item, "level", 1)))

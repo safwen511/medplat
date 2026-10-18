@@ -220,6 +220,31 @@ def test_pdf_normalization_page_sections_table_and_references(tmp_path: Path) ->
     )
 
 
+def test_pdf_normalization_keeps_raw_text_of_unenriched_formulas(tmp_path: Path) -> None:
+    source = tmp_path / "lesson.pdf"
+    make_pdf(source)
+    document = structured_pdf_document()
+    document.add_text(
+        DocItemLabel.FORMULA, "", orig="(taille père + taille mère + 13) 2", prov=provenance(1, 300)
+    )
+
+    normalized = normalize_docling_document(
+        document,
+        source_path=source,
+        source_relative_path="nested/lesson.pdf",
+        sha256=sha256_file(source),
+        mime_type="application/pdf",
+        document_type=DocumentType.PDF,
+        parser_name="docling-test",
+        parser_version="1",
+    )
+
+    formula = next(
+        block for block in normalized.pages[0].blocks if block.block_type is BlockType.FORMULA
+    )
+    assert formula.text == "(taille père + taille mère + 13) 2"
+
+
 def test_pdf_normalization_marks_low_text_image_pages_as_requiring_ocr(
     tmp_path: Path,
 ) -> None:

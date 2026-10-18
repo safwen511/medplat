@@ -1,13 +1,17 @@
-"""Convert legacy Office sources (.ppt, .ppsx, .doc) to OOXML derivatives and export their text.
+"""Convert Office sources to citable derivatives and export their text.
+
+Legacy slides (.ppt, .ppsx) become .pptx, exported with the Docling Office route (one
+`===== SLIDE n =====` per slide). Word documents (.doc, .docx) become PDF, exported with the
+standard local PDF route: a Word export has no pages, so without a paginated derivative its
+content could not be cited. Pages of a Word document are those of the LibreOffice PDF rendering.
 
 The read-only source is copied to a temporary directory and converted there with LibreOffice
-headless (.ppt/.ppsx -> .pptx, .doc -> .docx); the source tree is never written. Legacy files are
-discovered directly in library/<year>, so this can run before the inventory exists. Each
-derivative is content-addressed under
-data/<year>/office/<source-sha256>/ with a provenance record, then extracted with the project's
-existing Docling Office route (no PDF models, no OCR). Text exports are written in the standard
-mirrored format under data/<year>/text-office/, keeping the original source-relative path,
-extension, and SHA-256 in the header. Usage: python scripts/convert_legacy_office.py --year dcem1
+headless; the source tree is never written. Sources are discovered directly in library/<year>, so
+this can run before the inventory exists. Each derivative is content-addressed under
+data/<year>/office/<source-sha256>/ with a provenance record. Text exports are written in the
+standard mirrored format under data/<year>/text-office/, keeping the original source-relative
+path, extension, and SHA-256 in the header; the inventory prefers them over the direct export.
+Usage: python scripts/convert_office.py --year dcem1
 """
 
 from __future__ import annotations
@@ -22,15 +26,15 @@ from pathlib import Path
 
 from ingestion.config import DoclingSettings
 from ingestion.hashing import sha256_file
-from ingestion.library import Year, get_year
+from ingestion.library import Year, docling_artifacts_path, get_year
 from ingestion.output import write_json_atomic, write_text_atomic
 from ingestion.text_tree.discovery import DiscoveredSource
-from ingestion.text_tree.extraction import LocalTextExtractor
+from ingestion.text_tree.extraction import LocalTextExtractor, inspect_pdf_technically
 from ingestion.text_tree.models import ExportStatus
 from ingestion.text_tree.rendering import render_export
 
-# Legacy extension -> OOXML format LibreOffice converts it to.
-LEGACY_TARGETS = {".ppt": "pptx", ".ppsx": "pptx", ".doc": "docx"}
+# Source extension -> format LibreOffice converts it to.
+OFFICE_TARGETS = {".ppt": "pptx", ".ppsx": "pptx", ".doc": "pdf", ".docx": "pdf"}
 
 
 def libreoffice_version() -> str:
@@ -65,18 +69,21 @@ def convert(source: Path, workdir: Path, target: str) -> Path:
 
 def main(year: Year) -> int:
     source_root, derived_root, text_root = year.source, year.office, year.text_office
-    legacy = sorted(
+    sources = sorted(
         path.relative_to(source_root).as_posix()
         for path in source_root.rglob("*")
-        if path.is_file() and path.suffix.lower() in LEGACY_TARGETS
+        if path.is_file() and path.suffix.lower() in OFFICE_TARGETS
     )
     version = libreoffice_version()
-    extractor = LocalTextExtractor(DoclingSettings.from_sources())
+    settings = DoclingSettings.from_sources()
+    if settings.artifacts_path is None:
+        settings = DoclingSettings.from_sources(cli_artifacts_path=docling_artifacts_path())
+    extractor = LocalTextExtractor(settings)
     manifest = []
-    for relative_path in legacy:
+    for relative_path in sources:
         source = source_root / relative_path
         source_sha = sha256_file(source)
-        target = LEGACY_TARGETS[source.suffix.lower()]
+        target = OFFICE_TARGETS[source.suffix.lower()]
         entry: dict[str, object] = {
             "source_relative_path": relative_path,
             "source_sha256": source_sha,
@@ -105,16 +112,19 @@ def main(year: Year) -> int:
                     "operation": f"soffice --headless --convert-to {target}",
                 },
             )
+            discovered = DiscoveredSource(
+                path=derivative,
+                relative_path=relative_path,
+                extension=f".{target}",
+                size_bytes=derivative.stat().st_size,
+                sha256=source_sha,
+            )
             result = extractor.extract(
-                DiscoveredSource(
-                    path=derivative,
-                    relative_path=relative_path,
-                    extension=f".{target}",
-                    size_bytes=derivative.stat().st_size,
-                    sha256=source_sha,
-                ),
+                discovered,
                 input_root=source_root,
-                pdf_inspection=None,
+                pdf_inspection=(
+                    inspect_pdf_technically(discovered, source_root) if target == "pdf" else None
+                ),
                 accepted_derivative=None,
                 derivative_warnings=(
                     f"Extracted from a LibreOffice .{target} derivative (sha256 {derivative_sha}).",

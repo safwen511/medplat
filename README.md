@@ -6,7 +6,8 @@ source-grounded lessons and exercises for a student revision website.
 Pipeline, per year:
 
 1. **Extract** — mirror every original file to UTF-8 text with page/slide separators (Docling +
-   PyMuPDF; LibreOffice for legacy `.ppt`/`.ppsx`; explicit local OCR derivatives).
+   PyMuPDF; LibreOffice `.pptx` derivatives for `.ppt`/`.ppsx` and PDF derivatives for
+   `.doc`/`.docx`, so Word content has citable pages; explicit local OCR derivatives).
 2. **Catalog** — inventory every file with a text-quality score, then classify files into
    pole → certif → module → lesson, with source roles (official slides, polycopié, student summary…).
 3. **Reconstruct** — rebuild each lesson from its sources only, every statement citing its source
@@ -24,7 +25,7 @@ library.toml          years: id, label, source folder; Docling model path
 library/<year>/       original course files, read-only, Git-ignored
 data/<year>/          everything derived, Git-ignored
   text/               mirrored text exports (+ export-manifest.json)
-  text-office/        text of legacy .ppt/.ppsx via .pptx derivatives
+  text-office/        text of .ppt/.ppsx (.pptx derivatives) and .doc/.docx (PDF derivatives)
   office/             LibreOffice derivatives, content-addressed by source SHA-256
   ocr/                OCR derivatives, content-addressed
   reports/            extraction run reports
@@ -46,7 +47,7 @@ docling-tools models download --output-dir "$PWD/data/models/docling" layout tab
 medparse check-environment --docling-artifacts-path data/models/docling
 ```
 
-LibreOffice (`soffice`) is needed for legacy Office conversion; OCRmyPDF and Tesseract for OCR.
+LibreOffice (`soffice`) is needed for Office conversion; OCRmyPDF and Tesseract for OCR.
 
 ## Commands
 
@@ -54,7 +55,7 @@ LibreOffice (`soffice`) is needed for legacy Office conversion; OCRmyPDF and Tes
 # 1. Extract (review the dry run first; --resume skips validated outputs)
 medparse extract-text-tree --year dcem2 --dry-run
 medparse extract-text-tree --year dcem2 --resume
-python scripts/convert_legacy_office.py --year dcem2   # after the inventory exists
+python scripts/convert_office.py --year dcem2          # .ppt/.ppsx -> .pptx, .doc/.docx -> PDF
 
 # 2. Catalog
 python scripts/build_inventory.py --year dcem2
