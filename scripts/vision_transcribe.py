@@ -28,7 +28,14 @@ from typing import Any
 
 import fitz
 
-from ingestion.claude_batch import BatchRun, custom_id, estimate_usd, load_api_key, message_text
+from ingestion.claude_batch import (
+    BatchRun,
+    check_budget,
+    custom_id,
+    estimate_usd,
+    load_api_key,
+    message_text,
+)
 from ingestion.library import Year, get_year
 from ingestion.output import write_json_atomic, write_text_atomic
 from ingestion.text_tree.models import ExportStatus
@@ -250,6 +257,7 @@ def main() -> int:
     submit_parser.add_argument("--quality", default="empty", help=quality_help)
     submit_parser.add_argument("--limit", type=int, help="submit at most N pending pages")
     submit_parser.add_argument("--yes", action="store_true", help="confirm spending money")
+    submit_parser.add_argument("--max-usd", type=float, help="refuse above this estimate")
     sub.add_parser("collect")
     sub.add_parser("export")
     sub.add_parser("status")
@@ -262,6 +270,10 @@ def main() -> int:
         if not args.yes:
             raise SystemExit("submit spends money: re-run with --yes after the owner's go.")
         run.plan(targets(year, set(args.quality.split(","))))
+        pending = run.pending()[: args.limit] if args.limit else run.pending()
+        pages = len(pending)
+        estimate = estimate_usd(args.model, pages * 2770, pages * ESTIMATED_OUTPUT_TOKENS)
+        check_budget(estimate, args.max_usd)
         batches = run.submit(client(), build(year, args.model), limit=args.limit)
         print(f"submitted {len(batches)} batch(es): {', '.join(batches) or '-'}")
     elif args.command == "collect":

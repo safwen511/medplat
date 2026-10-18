@@ -28,7 +28,14 @@ from typing import Any
 
 from validate_lesson import validate
 
-from ingestion.claude_batch import BatchRun, custom_id, estimate_usd, load_api_key, message_text
+from ingestion.claude_batch import (
+    BatchRun,
+    check_budget,
+    custom_id,
+    estimate_usd,
+    load_api_key,
+    message_text,
+)
 from ingestion.library import PROJECT_ROOT, Year, get_year
 from ingestion.output import write_json_atomic, write_text_atomic
 
@@ -54,7 +61,7 @@ ROLE_LABELS = {
 EXAM_KINDS = {"exam_paper", "exam_with_answers", "qcm_bank", "qe_bank", "self_assessment"}
 EXAM_MAX_LESSONS = 4  # only papers that target few lessons are informative for one lesson
 EXAM_BUDGET = 20_000  # characters of exam excerpts per lesson
-CHARS_PER_TOKEN = 3.3  # French course text, for estimates only
+CHARS_PER_TOKEN = 2.3  # measured on French course text (step 0), for estimates only
 SEPARATOR = re.compile(r"^===== (PAGE|SLIDE) (\d+) =====$", re.MULTILINE)
 RANGE = re.compile(r"(\d+)(?:-(\d+))?")
 POLICY = (
@@ -76,7 +83,14 @@ résumés complètent ; un élément présent seulement dans un résumé reste, 
 par une ou plusieurs citations, par exemple [S1 p.12], [S2 p.30-31; S3 p.2] ou [S4 slide 5]. Les \
 numéros sont ceux des séparateurs « ===== PAGE n ===== » et « ===== SLIDE n ===== » des sources \
 (utilise « slide » pour les sources à SLIDE). Ne cite que des pages qui contiennent réellement \
-l'information.
+l'information. Un validateur automatique rejette le cours entier si une seule ligne de contenu \
+n'a pas de citation : la phrase qui introduit une liste, chaque élément de liste (même court, \
+même dans une sous-liste) et chaque ligne de tableau portent leur propre citation, à la fin de la \
+ligne. Un intitulé s'écrit comme titre (### ou ####), jamais comme ligne en gras isolée. Exemple :
+La prise en charge comporte trois volets : [S2 p.4]
+- le traitement symptomatique ; [S2 p.4]
+- l'antibiothérapie adaptée au germe ; [S1 slide 12; S2 p.4]
+- le traitement de la porte d'entrée. [S2 p.5]
 4. Chiffres : tout nombre écrit dans le cours figure tel quel, avec la même unité, sur une page \
 citée de cet élément. N'arrondis pas, ne convertis pas, ne calcule pas.
 5. Désaccords entre sources : ne tranche jamais. Liste-les dans la section finale \
@@ -118,8 +132,17 @@ sources: <rappel court de S1…Sn>
 (ou, s'il n'y a rien : « > Aucun désaccord relevé entre les sources. »)"""
 
 
-def run_for(year: Year, repair: bool = False) -> BatchRun:
-    return BatchRun(year.runs / "reconstruct" / ("v1-repair" if repair else "v1"))
+def run_for(year: Year, repair: bool = False, name: str = "v1") -> BatchRun:
+    """Runs named test-* are comparison runs: they keep validated drafts and never publish."""
+    return BatchRun(year.runs / "reconstruct" / (f"{name}-repair" if repair else name))
+
+
+def estimate_items(model: str, items: list[dict[str, Any]]) -> float:
+    input_tokens = int(sum(item["input_characters"] for item in items) / CHARS_PER_TOKEN)
+    # Measured on the step 0 test (Opus 5.5 / Sonnet 5.5, effort high): output, thinking
+    # included, is about 0.6x the input tokens plus a few thousand per lesson.
+    output_tokens = int(input_tokens * 0.6) + len(items) * 4000
+    return estimate_usd(model, input_tokens, output_tokens)
 
 
 def load_text(record: dict[str, Any]) -> str | None:
@@ -339,8 +362,9 @@ def write_lesson(
     return metadata
 
 
-def collect(year: Year, client: Any, repair: bool) -> int:
-    run = run_for(year, repair)
+def collect(year: Year, client: Any, repair: bool, name: str) -> int:
+    run = run_for(year, repair, name)
+    publish = not name.startswith("test-")
     print(run.collect(client))
     items = by_id(year)
     planned_items = {item["custom_id"]: item for item in run.items()}
@@ -351,9 +375,17 @@ def collect(year: Year, client: Any, repair: bool) -> int:
             continue
         lesson_id = planned_items[custom]["lesson_id"]
         target = year.lessons / lesson_id
-        if (target / "lesson.json").is_file() and json.loads(
-            (target / "lesson.json").read_text(encoding="utf-8")
-        ).get("reconstruction", {}).get("custom_id") == custom:
+        published_from = (
+            json.loads((target / "lesson.json").read_text(encoding="utf-8")).get(
+                "reconstruction", {}
+            )
+            if (target / "lesson.json").is_file()
+            else {}
+        )
+        if publish and (published_from.get("custom_id"), published_from.get("run")) == (
+            custom,
+            run.root.name,
+        ):
             continue  # already published from this result
         draft = drafts / lesson_id
         item = items[lesson_id] | {"_with_books": planned_items[custom]["with_books"]}
@@ -369,28 +401,36 @@ def collect(year: Year, client: Any, repair: bool) -> int:
         if report.errors:
             failed += 1
             continue
+        if not publish:
+            continue  # comparison runs keep validated drafts only
         write_lesson(target, item, message_text(record), record, run.root.name)
         write_json_atomic(target / "lesson.json", metadata)
         published += 1
-    print(f"published {published} lessons; {failed} drafts failed validation ({drafts})")
+    passed = len(list(drafts.glob("*/lesson.json"))) - failed if not publish else published
+    print(
+        f"{'published' if publish else 'validated drafts (not published)'} {passed}; "
+        f"{failed} drafts failed validation ({drafts})"
+    )
     return 0
 
 
-def repair_items(year: Year) -> list[dict[str, Any]]:
-    """One repair item per failing draft of the main run that has no published lesson."""
-    drafts = run_for(year).root / "drafts"
+def repair_items(year: Year, name: str) -> list[dict[str, Any]]:
+    """One repair item per failing draft of a run that has no published lesson."""
+    drafts = run_for(year, name=name).root / "drafts"
     items = []
     for path in sorted(drafts.glob("*/lesson.json")):
         metadata = json.loads(path.read_text(encoding="utf-8"))
         errors = metadata.get("validation", {}).get("errors")
         published = year.lessons / metadata["lesson_id"] / "lesson.json"
-        if errors and not published.is_file():
+        if errors and (name.startswith("test-") or not published.is_file()):
+            draft_chars = len((path.parent / "lesson.md").read_text(encoding="utf-8"))
             items.append(
                 {
                     "custom_id": custom_id("rr", metadata["reconstruction"]["custom_id"]),
                     "lesson_id": metadata["lesson_id"],
                     "with_books": False,
                     "draft": str(path.parent),
+                    "input_characters": draft_chars * 3,  # sources + draft, for the estimate
                 }
             )
     return items
@@ -423,6 +463,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--year", required=True, help="year id from library.toml")
     parser.add_argument("--model", default=MODEL)
+    parser.add_argument("--run", default="v1", help="run name; test-* runs never publish")
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("plan", "submit"):
         command = sub.add_parser(name)
@@ -434,8 +475,10 @@ def main() -> int:
         )
         if name == "submit":
             command.add_argument("--yes", action="store_true", help="confirm spending money")
+            command.add_argument("--max-usd", type=float, help="refuse above this estimate")
     repair_parser = sub.add_parser("repair")
     repair_parser.add_argument("--yes", action="store_true", help="confirm spending money")
+    repair_parser.add_argument("--max-usd", type=float, help="refuse above this estimate")
     collect_parser = sub.add_parser("collect")
     collect_parser.add_argument("--repair", action="store_true", help="collect the repair run")
     sub.add_parser("status")
@@ -449,10 +492,8 @@ def main() -> int:
         selected = select(year, patterns, args.rebuild)
         items = [planned(item, args.with_books) for item in selected]
         items = items[: args.limit] if args.limit else items
-        characters = sum(item["input_characters"] for item in items)
-        input_tokens = int(characters / CHARS_PER_TOKEN)
-        output_tokens = int(input_tokens * 0.35) + len(items) * 4000  # lesson + thinking
-        cost = estimate_usd(args.model, input_tokens, output_tokens)
+        input_tokens = int(sum(item["input_characters"] for item in items) / CHARS_PER_TOKEN)
+        cost = estimate_items(args.model, items)
         print(
             f"{len(items)} lessons, ~{input_tokens:,} input tokens; estimate ({args.model}, "
             f"batch, effort {EFFORT}): ~${cost:.2f}"
@@ -465,24 +506,26 @@ def main() -> int:
             return 0
         if not args.yes:
             raise SystemExit("submit spends money: re-run with --yes after the owner's go.")
-        run = run_for(year)
+        run = run_for(year, name=args.run)
         run.plan(items)
+        check_budget(estimate_items(args.model, run.pending()), args.max_usd)
         batches = run.submit(client(), build(year, args.model, False))
         print(f"submitted {len(batches)} batch(es)")
         print(json.dumps(run.summary(), indent=2))
     elif args.command == "repair":
         if not args.yes:
             raise SystemExit("repair spends money: re-run with --yes after the owner's go.")
-        run = run_for(year, repair=True)
-        run.plan(repair_items(year))
+        run = run_for(year, repair=True, name=args.run)
+        run.plan(repair_items(year, args.run))
+        check_budget(estimate_items(args.model, run.pending()), args.max_usd)
         batches = run.submit(client(), build(year, args.model, True))
         print(f"submitted {len(batches)} repair batch(es)")
         print(json.dumps(run.summary(), indent=2))
     elif args.command == "collect":
-        return collect(year, client(), args.repair)
+        return collect(year, client(), args.repair, args.run)
     else:
         for repair in (False, True):
-            print(json.dumps(run_for(year, repair).summary(), indent=2))
+            print(json.dumps(run_for(year, repair, args.run).summary(), indent=2))
     return 0
 
 

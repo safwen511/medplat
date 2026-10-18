@@ -61,10 +61,13 @@ def export_lesson(
     module: dict[str, Any],
     figures: dict[str, Any],
     out: Path,
+    lessons_root: Path | None = None,
+    exercises_root: Path | None = None,
+    allow_errors: bool = False,
 ) -> bool:
-    directory = year.lessons / lesson_id
+    directory = (lessons_root or year.lessons) / lesson_id
     report = validate(directory)
-    if report.errors:
+    if report.errors and not allow_errors:
         print(f"skip {lesson_id}: {len(report.errors)} validation errors")
         return False
     metadata = json.loads((directory / "lesson.json").read_text(encoding="utf-8"))
@@ -105,12 +108,44 @@ def export_lesson(
                 for key, source in metadata["sources"].items()
             ],
             "figures": lesson_figures,
+            "validationErrors": report.errors,
         },
     )
-    exercises = year.data / "exercises" / f"{lesson_id}.json"
+    exercises = (exercises_root or year.data / "exercises") / f"{lesson_id}.json"
     if exercises.is_file():
         shutil.copyfile(exercises, out / "exercises" / f"{lesson_id}.json")
     return True
+
+
+def export_comparison(year: Year, run: str) -> int:
+    """Validated drafts of a comparison run, for /dev/comparer (never part of the site)."""
+    out = WEB / "content" / "_compare" / year.faculty_slug / year.id / run
+    for sub in ("lessons", "exercises"):
+        shutil.rmtree(out / sub, ignore_errors=True)
+        (out / sub).mkdir(parents=True)
+    catalog = json.loads((year.catalog / "catalog.json").read_text(encoding="utf-8"))
+    manifest = year.data / "figures" / "manifest.json"
+    figures = json.loads(manifest.read_text(encoding="utf-8")) if manifest.is_file() else {}
+    drafts = year.runs / "reconstruct" / run / "drafts"
+    exercises_root = year.runs / "exercises" / run / "exercises"
+    exported = 0
+    for certif in catalog["certifs"]:
+        for module in certif["modules"]:
+            for lesson in module["lessons"]:
+                if (drafts / lesson["lesson_id"] / "lesson.md").is_file():
+                    exported += export_lesson(
+                        year,
+                        lesson["lesson_id"],
+                        certif,
+                        module,
+                        figures,
+                        out,
+                        drafts,
+                        exercises_root,
+                        allow_errors=True,  # comparison only: drafts are shown with their errors
+                    )
+    print(f"{year.id} comparison run {run}: {exported} lessons -> {out}")
+    return 0
 
 
 def main(year: Year) -> int:
@@ -171,4 +206,9 @@ def main(year: Year) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--year", required=True, help="year id from library.toml")
-    sys.exit(main(get_year(parser.parse_args().year)))
+    parser.add_argument("--compare-run", help="export a comparison run's drafts for /dev/comparer")
+    arguments = parser.parse_args()
+    selected = get_year(arguments.year)
+    if arguments.compare_run:
+        sys.exit(export_comparison(selected, arguments.compare_run))
+    sys.exit(main(selected))

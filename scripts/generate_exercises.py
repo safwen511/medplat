@@ -29,13 +29,20 @@ from typing import Any
 
 from validate_lesson import CITATION, claimed_numbers, load_pages, normalize, numbers, validate
 
-from ingestion.claude_batch import BatchRun, custom_id, estimate_usd, load_api_key, message_text
+from ingestion.claude_batch import (
+    BatchRun,
+    check_budget,
+    custom_id,
+    estimate_usd,
+    load_api_key,
+    message_text,
+)
 from ingestion.library import PROJECT_ROOT, Year, get_year
 from ingestion.output import write_json_atomic
 
 MODEL = "claude-opus-5-5"
 EFFORT = "medium"
-CHARS_PER_TOKEN = 3.3
+CHARS_PER_TOKEN = 2.3  # measured on French course text (step 0)
 FRONT_MATTER = re.compile(r"\A---\n.*?\n---\n", re.DOTALL)
 BLANK = re.compile(r"\{\{(\w+)\}\}")
 
@@ -50,79 +57,107 @@ def _object(properties: dict[str, Any]) -> dict[str, Any]:
 
 
 TEXT = {"type": "string"}
-OPTION = _object({"id": TEXT, "text": TEXT})
-OPTIONS = {"type": "array", "items": OPTION}
-COMMON = {
-    "stem": TEXT,
-    "hints": {"type": "array", "items": TEXT},
-    "explanation": TEXT,
-    "citations": TEXT,
-    "high_yield": {"type": "boolean"},
-    "difficulty": {"type": "integer", "enum": [1, 2, 3]},
-}
-
-
-def _item(kind: str, fields: dict[str, Any]) -> dict[str, Any]:
-    return _object({"type": {"type": "string", "const": kind}, **COMMON, **fields})
-
-
+OPTIONS = {"type": "array", "items": _object({"id": TEXT, "text": TEXT})}
+KINDS = [
+    "qcm",
+    "qrm",
+    "vrai_faux",
+    "texte_a_trous",
+    "association",
+    "ordre",
+    "categories",
+    "numerique",
+]
+# One flat item shape for every type (a union of per-type shapes compiles to a grammar the API
+# rejects as too large); decode() turns it into the typed item checked below.
 SCHEMA = _object(
     {
         "items": {
             "type": "array",
-            "items": {
-                "anyOf": [
-                    _item("qcm", {"options": OPTIONS, "answer": TEXT}),
-                    _item("qrm", {"options": OPTIONS, "answer": {"type": "array", "items": TEXT}}),
-                    _item("vrai_faux", {"answer": {"type": "boolean"}}),
-                    _item(
-                        "texte_a_trous",
-                        {
-                            "text": TEXT,
-                            "blanks": {
-                                "type": "array",
-                                "items": _object(
-                                    {"id": TEXT, "accepted": {"type": "array", "items": TEXT}}
-                                ),
-                            },
-                        },
-                    ),
-                    _item(
-                        "association",
-                        {
-                            "left": OPTIONS,
-                            "right": OPTIONS,
-                            "pairs": {
-                                "type": "array",
-                                "items": _object({"left": TEXT, "right": TEXT}),
-                            },
-                        },
-                    ),
-                    _item("ordre", {"items": OPTIONS, "order": {"type": "array", "items": TEXT}}),
-                    _item(
-                        "categories",
-                        {
-                            "categories": OPTIONS,
-                            "items": OPTIONS,
-                            "mapping": {
-                                "type": "array",
-                                "items": _object({"item": TEXT, "category": TEXT}),
-                            },
-                        },
-                    ),
-                    _item(
-                        "numerique",
-                        {
-                            "value": {"type": "number"},
-                            "tolerance": {"type": "number"},
-                            "unit": TEXT,
-                        },
-                    ),
-                ]
-            },
+            "items": _object(
+                {
+                    "type": {"type": "string", "enum": KINDS},
+                    "stem": TEXT,
+                    "options": OPTIONS,
+                    "options_b": OPTIONS,
+                    "answers": {"type": "array", "items": TEXT},
+                    "text": TEXT,
+                    "unit": TEXT,
+                    "tolerance": {"type": "number"},
+                    "hints": {"type": "array", "items": TEXT},
+                    "explanation": TEXT,
+                    "citations": TEXT,
+                    "high_yield": {"type": "boolean"},
+                    "difficulty": {"type": "integer", "enum": [1, 2, 3]},
+                }
+            ),
         }
     }
 )
+
+
+def _pairs(answers: list[str], left: str, right: str) -> list[dict[str, str]]:
+    pairs = []
+    for answer in answers:
+        first, separator, second = answer.partition(":")
+        if not separator:
+            raise ValueError(f"expected 'a:b', got {answer!r}")
+        pairs.append({left: first.strip(), right: second.strip()})
+    return pairs
+
+
+def decode(flat: dict[str, Any]) -> dict[str, Any]:
+    """The flat structured-output item as a typed item (raises ValueError when malformed)."""
+    item = {
+        key: flat[key]
+        for key in ("type", "stem", "hints", "explanation", "citations", "high_yield", "difficulty")
+    }
+    kind, answers = flat["type"], flat["answers"]
+    if kind == "qcm":
+        item |= {"options": flat["options"], "answer": answers[0] if answers else ""}
+    elif kind == "qrm":
+        item |= {"options": flat["options"], "answer": answers}
+    elif kind == "vrai_faux":
+        if not answers or answers[0].strip().lower() not in {"vrai", "faux"}:
+            raise ValueError("vrai_faux answer must be 'vrai' or 'faux'")
+        item |= {"answer": answers[0].strip().lower() == "vrai"}
+    elif kind == "texte_a_trous":
+        blanks = []
+        for answer in answers:
+            key, separator, accepted = answer.partition("=")
+            if not separator:
+                raise ValueError(f"expected 'n=réponse|variante', got {answer!r}")
+            blanks.append(
+                {
+                    "id": key.strip(),
+                    "accepted": [a.strip() for a in accepted.split("|") if a.strip()],
+                }
+            )
+        item |= {"text": flat["text"], "blanks": blanks}
+    elif kind == "association":
+        item |= {
+            "left": flat["options"],
+            "right": flat["options_b"],
+            "pairs": _pairs(answers, "left", "right"),
+        }
+    elif kind == "ordre":
+        item |= {"items": flat["options"], "order": answers}
+    elif kind == "categories":
+        item |= {
+            "items": flat["options"],
+            "categories": flat["options_b"],
+            "mapping": _pairs(answers, "item", "category"),
+        }
+    elif kind == "numerique":
+        if not answers:
+            raise ValueError("numerique needs a value")
+        item |= {
+            "value": float(answers[0].replace(",", ".")),
+            "tolerance": flat["tolerance"],
+            "unit": flat["unit"],
+        }
+    return item
+
 
 SYSTEM = """Tu écris des exercices de révision pour des étudiants en médecine (Faculté de Médecine \
 de Sfax) à partir d'un cours déjà rédigé et cité. Le cours est la seule source autorisée.
@@ -138,13 +173,26 @@ jamais une valeur inventée.
 - Distracteurs plausibles mais clairement faux d'après le cours ; pas de « toutes les réponses \
 ci-dessus » ; pas de négations doubles.
 
-Répartition (10 exercices) : 3 "qcm" (une seule bonne réponse, 4 ou 5 propositions A-E), 2 "qrm" \
-(plusieurs bonnes réponses, 5 propositions A-E), 2 "vrai_faux", 1 "texte_a_trous" (le texte \
-contient {{1}}, {{2}}… et "blanks" donne les réponses acceptées : terme exact et variantes \
-d'écriture), 1 exercice "association", "ordre" ou "categories" (le plus adapté au cours : ordre \
-pour des étapes, association pour médicament ↔ effet, catégories pour classer), 1 "numerique" si \
-le cours contient une valeur clé (sinon un "qcm" de plus). Privilégie les sections dont le titre \
-porte {examen} (high_yield = true pour les exercices qui les testent).
+Répartition (10 exercices) : 3 "qcm" (une seule bonne réponse, 4 ou 5 propositions), 2 "qrm" \
+(plusieurs bonnes réponses, 5 propositions), 2 "vrai_faux", 1 "texte_a_trous", 1 exercice \
+"association", "ordre" ou "categories" (le plus adapté au cours : ordre pour des étapes, \
+association pour médicament ↔ effet, catégories pour classer), 1 "numerique" si le cours contient \
+une valeur clé (sinon un "qcm" de plus). Privilégie les sections dont le titre porte {examen} \
+(high_yield = true pour les exercices qui les testent).
+
+Format de chaque exercice (tous les champs sont toujours présents ; mets "" , [] ou 0 quand un \
+champ ne sert pas au type) :
+- qcm / qrm : "options" = propositions [{"id": "A", "text": …}] ; "answers" = identifiants des \
+bonnes réponses (un seul pour qcm).
+- vrai_faux : "stem" est l'affirmation ; "answers" = ["vrai"] ou ["faux"].
+- texte_a_trous : "text" contient {{1}}, {{2}}… ; "answers" = ["1=terme|variante", "2=terme"] \
+(réponses acceptées séparées par |).
+- association : "options" = colonne de gauche (ids l1, l2…), "options_b" = colonne de droite \
+(r1, r2…) ; "answers" = ["l1:r2", "l2:r1", …].
+- ordre : "options" = étapes (ids i1, i2…) ; "answers" = les ids dans le bon ordre.
+- categories : "options" = éléments (i1…), "options_b" = catégories (c1…) ; \
+"answers" = ["i1:c2", …].
+- numerique : "answers" = ["valeur"], "unit" = unité, "tolerance" = écart accepté (souvent 0).
 
 Indices ("hints", exactement 3, du plus général au plus précis, sans donner la réponse) :
 1. Que demande vraiment la question (mot-clé, piège de l'énoncé) ;
@@ -155,21 +203,34 @@ distracteurs sont faux ; puis le schéma de raisonnement à retenir (« devant �
 Difficulté : 1 = connaissance directe, 2 = compréhension, 3 = raisonnement.
 Les propositions sont mélangées à l'affichage : dans l'énoncé, les indices et l'explication, ne \
 désigne jamais une proposition par sa lettre ; reprends son contenu.
-Rédige en français. Identifiants des propositions : "A", "B"… ; pour association, catégories et \
-ordre : identifiants courts ("l1", "r1", "c1", "i1"…)."""
+Rédige en français."""
 
 
-def run_for(year: Year) -> BatchRun:
-    return BatchRun(year.runs / "exercises" / "v1")
+def run_for(year: Year, name: str = "v1") -> BatchRun:
+    """Runs named test-* write their exercises inside the run only."""
+    return BatchRun(year.runs / "exercises" / name)
 
 
-def lessons(year: Year, patterns: list[str] | None, regenerate: bool) -> list[str]:
+def output_dir(year: Year, name: str) -> Path:
+    if name.startswith("test-"):
+        return run_for(year, name).root / "exercises"
+    return year.data / "exercises"
+
+
+def estimate_lessons(year: Year, model: str, lesson_ids: list[str]) -> float:
+    characters = sum(len(lesson_markdown(year, lesson_id)) for lesson_id in lesson_ids)
+    input_tokens = int(characters / CHARS_PER_TOKEN) + len(lesson_ids) * 1500
+    output_tokens = len(lesson_ids) * 9000  # 10 items with hints and explanations + thinking
+    return estimate_usd(model, input_tokens, output_tokens)
+
+
+def lessons(year: Year, patterns: list[str] | None, regenerate: bool, out: Path) -> list[str]:
     selected = []
     for path in sorted(year.lessons.glob("*/lesson.md")):
         lesson_id = path.parent.name
         if patterns and not any(fnmatch.fnmatch(lesson_id, p) for p in patterns):
             continue
-        if (year.data / "exercises" / f"{lesson_id}.json").is_file() and not regenerate:
+        if (out / f"{lesson_id}.json").is_file() and not regenerate:
             continue
         selected.append(lesson_id)
     return selected
@@ -315,8 +376,8 @@ def to_web(lesson_id: str, index: int, item: dict[str, Any]) -> dict[str, Any]:
     return base
 
 
-def collect(year: Year) -> int:
-    run = run_for(year)
+def collect(year: Year, name: str) -> int:
+    run = run_for(year, name)
     print(run.collect(client()))
     planned = {item["custom_id"]: item for item in run.items()}
     written = kept = rejected = 0
@@ -324,7 +385,7 @@ def collect(year: Year) -> int:
         if record["type"] != "succeeded" or record["stop_reason"] != "end_turn":
             continue
         lesson_id = planned[custom]["lesson_id"]
-        target = year.data / "exercises" / f"{lesson_id}.json"
+        target = output_dir(year, name) / f"{lesson_id}.json"
         if target.is_file() and json.loads(target.read_text())["generation"]["custom_id"] == custom:
             continue
         lesson_dir = year.lessons / lesson_id
@@ -333,10 +394,15 @@ def collect(year: Year) -> int:
             continue
         items = json.loads(message_text(record))["items"]
         good, bad = [], []
-        for item in items:
+        for flat in items:
+            try:
+                item = decode(flat)
+            except (ValueError, KeyError, IndexError) as error:
+                bad.append({"item": flat, "errors": [f"malformed: {error}"]})
+                continue
             errors = check(lesson_dir, item)
             if errors:
-                bad.append({"item": item, "errors": errors})
+                bad.append({"item": flat, "errors": errors})
             else:
                 good.append(to_web(lesson_id, len(good) + 1, item))
         write_json_atomic(
@@ -373,6 +439,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--year", required=True, help="year id from library.toml")
     parser.add_argument("--model", default=MODEL)
+    parser.add_argument("--run", default="v1", help="run name; test-* runs keep their output")
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("plan", "submit"):
         command = sub.add_parser(name)
@@ -381,39 +448,39 @@ def main() -> int:
         command.add_argument("--regenerate", action="store_true")
         if name == "submit":
             command.add_argument("--yes", action="store_true", help="confirm spending money")
+            command.add_argument("--max-usd", type=float, help="refuse above this estimate")
     sub.add_parser("collect")
     sub.add_parser("status")
     args = parser.parse_args()
     year = get_year(args.year)
     if args.command in {"plan", "submit"}:
         patterns = args.lessons.split(",") if args.lessons else None
-        selected = lessons(year, patterns, args.regenerate)
+        selected = lessons(year, patterns, args.regenerate, output_dir(year, args.run))
         selected = selected[: args.limit] if args.limit else selected
-        characters = sum(len(lesson_markdown(year, lesson_id)) for lesson_id in selected)
-        input_tokens = int(characters / CHARS_PER_TOKEN) + len(selected) * 1500
-        output_tokens = len(selected) * 9000  # 10 items with hints and explanations + thinking
-        cost = estimate_usd(args.model, input_tokens, output_tokens)
+        cost = estimate_lessons(year, args.model, selected)
         print(f"{len(selected)} lessons; estimate ({args.model}, batch): ~${cost:.2f}")
         if args.command == "plan":
             return 0
         if not args.yes:
             raise SystemExit("submit spends money: re-run with --yes after the owner's go.")
-        run = run_for(year)
+        run = run_for(year, args.run)
         run.plan(
             [
                 {
-                    "custom_id": custom_id("x", f"{lesson_id}|{lesson_markdown(year, lesson_id)}"),
+                    "custom_id": custom_id("x2", f"{lesson_id}|{lesson_markdown(year, lesson_id)}"),
                     "lesson_id": lesson_id,
                 }
                 for lesson_id in selected
             ]
         )
+        pending = [item["lesson_id"] for item in run.pending()]
+        check_budget(estimate_lessons(year, args.model, pending), args.max_usd)
         print(f"submitted {run.submit(client(), params(year, args.model))}")
         print(json.dumps(run.summary(), indent=2))
     elif args.command == "collect":
-        return collect(year)
+        return collect(year, args.run)
     else:
-        print(json.dumps(run_for(year).summary(), indent=2))
+        print(json.dumps(run_for(year, args.run).summary(), indent=2))
     return 0
 
 

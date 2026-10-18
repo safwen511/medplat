@@ -72,6 +72,25 @@ def estimate_usd(model: str, input_tokens: int, output_tokens: int, *, batch: bo
     return estimate
 
 
+def total_spent(data_root: Path = PROJECT_ROOT / "data") -> float:
+    """Estimated USD spent by every recorded run of every year (from results.jsonl)."""
+    return sum(
+        record.get("cost_usd") or 0.0
+        for path in data_root.glob("*/runs/**/results.jsonl")
+        for record in _read_jsonl(path)
+    )
+
+
+def check_budget(estimate: float, max_usd: float | None) -> None:
+    """Refuse a paid submission without an explicit ceiling or above it."""
+    spent = total_spent()
+    print(f"this submission: ~${estimate:.2f}; spent so far (all runs): ${spent:.2f}")
+    if max_usd is None:
+        raise SystemExit("Paid submissions need --max-usd (the most this submission may cost).")
+    if estimate > max_usd:
+        raise SystemExit(f"Estimate ${estimate:.2f} exceeds --max-usd {max_usd:.2f}; not sent.")
+
+
 def load_api_key(env_file: Path = PROJECT_ROOT / ".env") -> bool:
     """Load ANTHROPIC_API_KEY from the Git-ignored .env file if it is not already set.
 
