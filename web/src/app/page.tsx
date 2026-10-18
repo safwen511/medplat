@@ -14,7 +14,7 @@ export default function Home() {
         </p>
       </div>
       <Button asChild size="lg" className="min-w-48">
-        <Link href="/connexion">Commencer</Link>
+        <Link href="/acces">Commencer</Link>
       </Button>
     </div>
   );

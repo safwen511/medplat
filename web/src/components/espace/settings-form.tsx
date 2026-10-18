@@ -1,5 +1,6 @@
 "use client";
 
+import { setExamDateBounds, validExamDate } from "@/lib/dates";
 import { Check, X } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useId, useState, type FormEvent, type ReactNode } from "react";
@@ -89,7 +90,7 @@ export function SettingsForm({
       displayName: name.trim() || null,
       faculty: initial?.faculty || "sfax",
       year,
-      examDate: examDate || null,
+      examDate: validExamDate(examDate),
       onboarded: true,
       dailyGoal: clampGoal(goalNumber),
     };
@@ -146,6 +147,7 @@ export function SettingsForm({
               Date du prochain certif
               <input
                 type="date"
+                ref={setExamDateBounds}
                 value={examDate}
                 onChange={(event) => setExamDate(event.target.value)}
                 className={fieldClass}

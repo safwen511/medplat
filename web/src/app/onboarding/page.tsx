@@ -1,5 +1,6 @@
 "use client";
 
+import { setExamDateBounds, validExamDate } from "@/lib/dates";
 import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -45,6 +46,7 @@ export default function Onboarding() {
     try {
       await store.saveProfile({
         ...profile,
+        examDate: validExamDate(profile.examDate),
         displayName: profile.displayName ?? user?.user_metadata?.name ?? null,
         onboarded: true,
       });
@@ -105,6 +107,7 @@ export default function Onboarding() {
             <span className="sr-only">Date du prochain certif</span>
             <input
               type="date"
+              ref={setExamDateBounds}
               value={profile.examDate ?? ""}
               onChange={(event) => setProfile({ ...profile, examDate: event.target.value || null })}
               className="h-14 w-full rounded-card border border-border bg-surface px-4 text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

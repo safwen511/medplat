@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { validExamDate } from "@/lib/dates";
 import { CertifDeck } from "@/components/cards/certif-deck";
 import { certifTheme } from "@/components/cards/themes";
 import { countTiers } from "@/components/cards/tiers";
@@ -56,7 +57,8 @@ function Today({ data }: { data: StudentData }) {
   const { profile, attempts, now } = data;
   const today = attemptsToday(attempts, now);
   const goal = profile?.dailyGoal ?? DAILY_GOAL;
-  const countdown = profile?.examDate ? daysUntil(profile.examDate, now) : null;
+  const examDate = validExamDate(profile?.examDate, now);
+  const countdown = examDate ? daysUntil(examDate, now) : null;
 
   const goalPart =
     today >= goal

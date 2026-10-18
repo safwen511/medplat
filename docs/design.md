@@ -1,51 +1,69 @@
-# MedPlat design rules
+# MedPlat design rules — "futuristic study console"
 
 ## Feeling
-Calm, quiet, confident. Inspired by the restraint of WeTransfer and the Claude login page:
-one clear action per screen, generous empty space, nothing competing for attention.
-Students use this under exam stress, so the interface must lower stress, not add to it.
+A study console: dark, deep and precise, with a sense of progress and play in navigation and
+total calm in the quiz. Inspired by game loading-screen cards (portrait cards, rank, identity),
+but every asset, frame and illustration is our own. Students revise under exam stress: the
+navigation motivates, the quiz focuses.
 
 ## Users and devices
-Tunisian medical students (DCEM1/DCEM2), revising mostly on tablets (often with a pen) and phones.
-Design tablet-first, then phone, then desktop. Tap targets at least 48px. Works in landscape.
-All UI text is in French.
+Tunisian medical students (DCEM1/DCEM2), revising mostly on tablets (often with a pen) and phones,
+including mid-range Android tablets. Tablet-first, then phone, then desktop. Tap targets >= 48px.
+Works in landscape. All UI text is in French (accents everywhere).
 
-## Layout
-- One primary action per screen. Secondary actions are text links, not buttons.
-- Content width: max ~640px for reading and quizzes, centered, lots of margin around it.
-- Spacing on a 4/8px scale only. Prefer more space over more elements.
-- Never nest boxes inside boxes. At most one surface (card) per screen; everything else sits on the page.
-- No dashboards full of tiles. No grids of identical cards with icons.
+## Two zones
+1. **Navigation zone** (home, certifs, courses, Mon espace): expressive. 3D cards with tilt on
+   hover, flip animations, per-certif colour identity, depth shadow, glow on focus and hover.
+2. **Quiz zone**: calm and focused. Minimal motion, maximum readability. The quiz logic and layout
+   stay; only the tokens change (surfaces, type, colours).
 
-## Color
-- Warm off-white background in light mode, deep warm gray in dark mode (support both).
-- Text: near-black, not pure #000. Secondary text: one muted gray.
-- ONE accent color, used only for the primary action and the current selection.
-- Correct / incorrect: a muted green and a muted red, used only for answer feedback.
-- No gradients. No purple. No glassmorphism. No colored backgrounds behind sections.
+## Theme
+- **Dark mode is the primary design** (light mode kept and maintained).
+- Dark background: deep blue-black, never pure #000. Light background: cool off-white.
+- Subtle glow and depth; never neon overload. Glow marks focus, hover and the current selection.
+- Per-certif colour identity in the navigation zone (one hue per certif, contrast-checked in
+  both themes). The quiz zone uses one accent plus muted correct/incorrect colours.
+
+## Surfaces and separation (3 levels)
+1. Page background.
+2. **Section panels**: slightly lighter than the page, 1px subtle border, 16–20px radius,
+   generous padding (24–32px). Every section of every page sits in its own panel with a clear
+   title row (title left, optional action right).
+3. **Cards on panels** (certif folders, course cards, stat tiles).
+- Consistent vertical rhythm between sections: 48–64px. Spacing on a 4/8px scale.
+- Never a bare wall of text: a page is a column of titled panels.
+
+## Numbers are visual
+Key numbers are never inside sentences. Use stat tiles (big number + small label), progress
+rings (goal, mastery) and progress bars (per certif). Sentences may explain, not carry, numbers.
+
+## Motion and touch
+- Every hover effect has a tap equivalent (tap to flip, press state on press).
+- Animations 150–300ms; transform and opacity only (GPU-friendly); smooth on mid-range Android.
+- Respect `prefers-reduced-motion`: no tilt, no flip animation (instant swap), no glow pulses.
+- Quiz zone: only feedback transitions (answer state, next question).
 
 ## Typography
-- Headings: a refined serif (e.g. "Source Serif 4" or "Fraunces"); body: a clean humanist sans
-  (e.g. "Public Sans"). Never Inter, Roboto, Arial, or system defaults as the brand font.
-- Few sizes: page title, section title, body, small. Body text 17–18px on tablets.
-- Typography and space create hierarchy, not borders, shadows, or color.
+- One display face for headings and numbers, one body face for text (pairing chosen on
+  /styleguide). Few sizes: page title, panel title, body, small, and a large numeral style for
+  stat tiles. Body 17–18px on tablets.
 
-## Details
-- Borders: 1px hairlines in a soft gray, only when needed. Shadows: none, or one very soft shadow
-  on the single card. Corner radius: one value used everywhere (e.g. 12px).
-- Icons: a single thin line icon set (e.g. Lucide), used sparingly. No emoji in the UI.
-- Motion: short (150–200ms), purposeful (feedback on answer, screen transitions). No decorative
-  animations, no bounce, no parallax.
-- Empty states and errors: one short, friendly sentence plus one action.
+## Content rules (product decisions)
+- MedPlat publishes **exercises only, never course text**. Courses are navigation titles that lead
+  to their exercises; no "Lire" buttons, no "lus / Lus %" statistics.
+- In explanations, raw citation codes ("[S1 p.6]") are removed from the text and replaced by a
+  small line under the explanation: "Voir le cours : <titre>, p. 6".
+- Keep "Signaler une erreur" on every question and the persistent beta label
+  ("Bêta · gratuit · non relu par un médecin").
+- Empty or missing values say what to do: e.g. no exam date → "Ajoute la date de ton certif".
 
-## Quiz screen (the core of the product)
-- One question per screen. Question in large, readable text; options as large full-width tap rows.
-- After answering: show correct/incorrect inline, the short explanation, then a single "Suivant" button.
-- Progress shown as a thin bar and "Question 4 / 30". Nothing else on screen.
-- Small "Signaler une erreur" text link under the explanation.
-- Persistent beta label, discreet: "Bêta · gratuit · non relu par un médecin".
+## Access (beta)
+- Testers enter a personal access code (no e-mail login for now). A valid code opens the site and
+  shows a personal welcome (name, how the site works, what exists, what is coming). Codes are never
+  shipped to the browser and never committed.
 
 ## Forbidden
-Generic AI-template looks: hero sections with gradients, rows of feature cards with icons,
-badges everywhere, stacked shadows, multiple accent colors, centered marketing copy with emoji.
-If a choice looks like a default template, choose differently and explain why.
+- Copied assets, frames, fonts or art from any game.
+- Pure black backgrounds, neon overload, glow on everything.
+- Key numbers buried in sentences; pages without panels.
+- Animations of layout properties (width, height, top/left) or longer than 300ms.

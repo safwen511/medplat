@@ -1,10 +1,23 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { ACCESS_COOKIE, accessEnabled, verifyMember } from "@/lib/access";
 import { supabaseAnonKey, supabaseEnabled, supabaseUrl } from "@/lib/supabase/config";
 
-// Refresh the Supabase session cookie once per navigation, before pages render.
+// Pages anyone may open without an access code.
+const PUBLIC = new Set(["/", "/acces"]);
+
+// Beta gate (access codes), then the Supabase session refresh, once per navigation.
 export async function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  if (accessEnabled() && !PUBLIC.has(pathname)) {
+    const member = await verifyMember(request.cookies.get(ACCESS_COOKIE)?.value);
+    if (!member) {
+      const target = new URL("/acces", request.url);
+      target.searchParams.set("suite", pathname + search);
+      return NextResponse.redirect(target);
+    }
+  }
   let response = NextResponse.next({ request });
   if (!supabaseEnabled) return response;
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {

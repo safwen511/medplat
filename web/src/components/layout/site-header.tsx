@@ -117,7 +117,7 @@ export function SiteHeader() {
               </Link>
             ) : (
               <Link
-                href="/connexion"
+                href="/acces"
                 className={cn(
                   "flex h-12 items-center whitespace-nowrap rounded-card px-2 text-[0.9375rem] font-medium underline-offset-4 hover:underline",
                   focusRing,

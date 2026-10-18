@@ -1,5 +1,6 @@
 "use client";
 
+import { validExamDate } from "@/lib/dates";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, type ReactNode } from "react";
@@ -106,7 +107,7 @@ function ProfileLine({
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <Countdown examDate={profile?.examDate ?? null} now={now} />
+        <Countdown examDate={validExamDate(profile?.examDate, now)} now={now} />
         {store.kind === "local" && (
           <p className="text-[0.9375rem] text-muted">
             {supabaseEnabled ? (

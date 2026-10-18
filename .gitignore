@@ -33,3 +33,6 @@ data/
 # Website: generated content and figures (exported from data/ by scripts/export_web_content.py)
 web/content/
 web/public/figures/
+
+# Beta access codes (secret)
+vip
