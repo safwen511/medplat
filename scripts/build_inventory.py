@@ -37,10 +37,24 @@ MATERIAL_TYPES = {
     "td": "tutorial",
     "examens": "exams",
     "generalites": "general",
+    "qe": "qe_bank",
+    "qcm": "qcm_bank",
+    "evaluation": "self_assessment",
+    "evaluations": "self_assessment",
+    "autoevaluations": "self_assessment",
+    "cas cliniques": "clinical_cases",
+    "cas clinique": "clinical_cases",
+    "revision": "revision",
+    "divers": "misc",
+    "videos": "videos",
+    "pre requis": "prerequisites",
 }
 
 # Folder segments that only repeat structure and carry no taxonomy.
-_STRUCTURAL = {"2-pole b", "certif uro - nephro"}
+_STRUCTURAL = {"2-pole b", "certif uro - nephro", "certifs"}
+
+# Faculty folders inside a certif (DCEM2 neurology mixes Sfax and Tunis material).
+FACULTIES = {"fmsf": "Sfax", "fmt": "Tunis"}
 
 
 def _fold(value: str) -> str:
@@ -52,17 +66,35 @@ def _clean_segment(segment: str) -> str:
     return _DRIVE_SUFFIX.sub("", unicodedata.normalize("NFC", segment)).strip()
 
 
+def _is_certif(segment: str) -> bool:
+    return _LEADING_NUMBER.sub("", _fold(segment)).startswith("certif")
+
+
 def normalized_segments(relative_path: str) -> list[str]:
-    """Folder segments without Drive suffixes, consecutive repeats, or structural wrappers."""
+    """Folder segments without Drive suffixes, repeats, structural wrappers, or faculty folders.
+
+    A certif group folder such as "Neuro - psychiatrie" (directly containing "Certif ..."
+    folders) is a wrapper below the pole and is dropped, so the certif is the second segment.
+    """
+    cleaned = [_clean_segment(raw) for raw in Path(relative_path).parts[:-1]]
     segments: list[str] = []
-    for raw in Path(relative_path).parts[:-1]:
-        segment = _clean_segment(raw)
+    for index, segment in enumerate(cleaned):
         if segments and _fold(segment) == _fold(segments[-1]):
             continue
-        if _fold(segment) in _STRUCTURAL:
+        if _fold(segment) in _STRUCTURAL or _fold(segment) in FACULTIES:
+            continue
+        following = cleaned[index + 1] if index + 1 < len(cleaned) else None
+        if segments and following and _is_certif(following) and not _is_certif(segment):
             continue
         segments.append(segment)
     return segments
+
+
+def faculty(relative_path: str) -> str | None:
+    for raw in Path(relative_path).parts[:-1]:
+        if _fold(_clean_segment(raw)) in FACULTIES:
+            return FACULTIES[_fold(_clean_segment(raw))]
+    return None
 
 
 def classify(segments: list[str]) -> dict[str, str | None]:
@@ -189,6 +221,7 @@ def main(year: Year) -> int:
                 "pages_or_slides": entry.get("page_or_slide_count"),
                 "segments": segments,
                 **classify(segments),
+                "faculty": faculty(relative_path),
                 "title_hints": hints,
                 "text_quality_score": quality_score,
                 "text_quality": quality,
