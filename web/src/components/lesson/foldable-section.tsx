@@ -1,12 +1,12 @@
 "use client";
 
-import { ChevronDown, ClipboardCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
 import { headingClass, SectionHeading, sectionSpacing } from "./heading";
+import { textLink } from "./lesson-actions";
 
 export const REVEAL_EVENT = "lesson:reveal";
 
@@ -52,54 +52,34 @@ export function FoldableSection({
   }, [id]);
 
   return (
-    <section
-      ref={ref}
-      id={id}
-      data-section
-      data-foldable
-      className={cn(
-        "scroll-mt-28",
-        sectionSpacing(level),
-        reviewer && "rounded-card border border-border bg-surface-muted/60 px-4 py-3 sm:px-5",
-      )}
-    >
-      <SectionHeading
-        level={level}
-        className={cn(reviewer ? "font-sans text-base font-semibold text-foreground" : headingClass(level))}
-      >
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={contentId}
-          onClick={() => setOpen((value) => !value)}
-          className="group -mx-1 flex w-[calc(100%+0.5rem)] items-start gap-2 rounded-md px-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {reviewer && <ClipboardCheck className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden />}
-          <span className="min-w-0 flex-1">{title}</span>
-          <span className="mt-0.5 flex shrink-0 items-center gap-1 font-sans text-xs font-medium text-muted group-hover:text-primary">
-            <span className="hidden sm:inline">{open ? "Replier" : "Déplier"}</span>
-            <ChevronDown
-              className={cn("size-4 transition-transform duration-200", open && "rotate-180")}
-              aria-hidden
-            />
-          </span>
-        </button>
+    <section ref={ref} id={id} data-section data-foldable className={cn("scroll-mt-24", sectionSpacing(level))}>
+      <SectionHeading level={level} className={headingClass(level)}>
+        {title}
       </SectionHeading>
-      {badge && <div className="mt-2">{badge}</div>}
-      {reviewer && !open && (
-        <p className="mt-1 font-sans text-sm text-muted">
+      {badge}
+      {reviewer && (
+        <p className="mt-2 font-sans text-base text-muted">
           Divergences entre sources et points incertains, à l&apos;attention du relecteur médical.
         </p>
       )}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={() => setOpen((value) => !value)}
+        className={cn(textLink, "font-sans text-muted decoration-border hover:text-foreground hover:decoration-current")}
+      >
+        {open ? "Replier" : "Afficher la section"}
+      </button>
       <motion.div
         id={contentId}
         initial={false}
         animate={open ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
-        transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
         style={{ overflow: "hidden" }}
         inert={!open}
         aria-hidden={!open}
-        className={cn(reviewer && "text-[0.95rem] text-muted")}
+        className={cn(reviewer && "text-muted")}
       >
         {children}
       </motion.div>

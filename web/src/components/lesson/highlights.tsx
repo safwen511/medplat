@@ -1,11 +1,13 @@
 "use client";
 
 import { Highlighter, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 import { REVEAL_EVENT } from "./foldable-section";
+import { textLink } from "./lesson-actions";
 import { useLesson } from "./lesson-context";
 
 const BODY_SELECTOR = "[data-lesson-body]";
@@ -172,9 +174,9 @@ export function HighlightableBody({ children, className }: { children: ReactNode
           onPointerDown={(event) => event.preventDefault()}
           onClick={save}
           style={{ top: floating.top, left: floating.left }}
-          className="fixed z-50 inline-flex h-9 -translate-x-1/2 items-center gap-1.5 rounded-full bg-foreground px-3.5 font-sans text-sm font-medium text-background shadow-lg transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="fixed z-50 inline-flex h-12 -translate-x-1/2 items-center gap-2 rounded-card bg-foreground px-4 font-sans text-sm font-medium text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Highlighter className="size-4" aria-hidden />
+          <Highlighter className="size-4" strokeWidth={1.5} aria-hidden />
           Surligner
         </button>
       )}
@@ -184,10 +186,9 @@ export function HighlightableBody({ children, className }: { children: ReactNode
 
 // Panel --------------------------------------------------------------------------------------------
 
-export function HighlightsPanel({ className }: { className?: string }) {
+export function HighlightsPanel({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
   const { highlights, removeHighlight } = useLesson();
   const [missing, setMissing] = useState<Set<string>>(new Set());
-  const titleId = useId();
 
   useEffect(() => {
     const root = lessonBody();
@@ -198,60 +199,75 @@ export function HighlightsPanel({ className }: { className?: string }) {
     return () => cancelAnimationFrame(frame);
   }, [highlights]);
 
-  const goTo = useCallback((quote: string) => {
-    const root = lessonBody();
-    const range = root && locate(buildIndex(root), quote);
-    if (range) revealAndScroll(range);
-  }, []);
+  const goTo = useCallback(
+    (quote: string) => {
+      const root = lessonBody();
+      const range = root && locate(buildIndex(root), quote);
+      if (!range) return;
+      onNavigate?.();
+      // Let a closing dialog release the page first.
+      window.setTimeout(() => revealAndScroll(range), onNavigate ? 50 : 0);
+    },
+    [onNavigate],
+  );
+
+  if (highlights.length === 0) {
+    return (
+      <p className={cn("font-sans text-base text-muted", className)}>
+        Sélectionne un passage du cours, puis touche « Surligner » pour le retrouver ici.
+      </p>
+    );
+  }
 
   return (
-    <section aria-labelledby={titleId} className={cn("font-sans", className)} data-no-highlight>
-      <h2
-        id={titleId}
-        className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted"
-      >
-        <Highlighter className="size-3.5" aria-hidden />
-        Mes surlignages{highlights.length > 0 && ` (${highlights.length})`}
-      </h2>
-      {highlights.length === 0 ? (
-        <p className="text-sm text-muted">
-          Sélectionne un passage du cours puis touche « Surligner » pour le retrouver ici.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {highlights.map((item) => (
-            <li
-              key={item.id}
-              className="group flex items-start gap-1 rounded-lg border border-border bg-surface p-2 text-sm"
-            >
-              <button
-                type="button"
-                onClick={() => goTo(item.quote)}
-                disabled={missing.has(item.id)}
-                className="min-w-0 flex-1 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
-                aria-label={`Aller au passage : ${item.quote}`}
-              >
-                <span className="line-clamp-3 border-l-2 border-highyield pl-2 leading-snug text-foreground">
-                  {item.quote}
-                </span>
-                {missing.has(item.id) && (
-                  <span className="mt-1 block pl-2 text-xs text-muted">
-                    Passage introuvable dans la version actuelle du cours.
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => removeHighlight(item.id)}
-                className="shrink-0 rounded-md p-1.5 text-muted hover:bg-surface-muted hover:text-wrong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Supprimer ce surlignage"
-              >
-                <Trash2 className="size-4" aria-hidden />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <ul className={cn("flex flex-col divide-y divide-border font-sans", className)} data-no-highlight>
+      {highlights.map((item) => (
+        <li key={item.id} className="flex items-start gap-2 py-3">
+          <button
+            type="button"
+            onClick={() => goTo(item.quote)}
+            disabled={missing.has(item.id)}
+            className="min-h-12 min-w-0 flex-1 rounded-card text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+            aria-label={`Aller au passage : ${item.quote}`}
+          >
+            <span className="line-clamp-3 text-base leading-snug text-foreground">{item.quote}</span>
+            {missing.has(item.id) && (
+              <span className="mt-1 block text-sm text-muted">Passage introuvable dans la version actuelle du cours.</span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => removeHighlight(item.id)}
+            className="flex size-12 shrink-0 items-center justify-center rounded-card text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Supprimer ce surlignage"
+          >
+            <Trash2 className="size-4" strokeWidth={1.5} aria-hidden />
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** "Mes surlignages" text link opening the list of saved passages. */
+export function HighlightsLink({ className }: { className?: string }) {
+  const { highlights } = useLesson();
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className={cn(textLink, "text-muted decoration-border hover:text-foreground hover:decoration-current", className)}
+        >
+          Mes surlignages{highlights.length > 0 && ` (${highlights.length})`}
+        </button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[85vh] overflow-y-auto" onCloseAutoFocus={(event) => event.preventDefault()}>
+        <DialogTitle className="mb-2">Mes surlignages</DialogTitle>
+        <DialogDescription className="sr-only">Passages surlignés de ce cours.</DialogDescription>
+        <HighlightsPanel onNavigate={() => setOpen(false)} />
+      </DialogContent>
+    </Dialog>
   );
 }

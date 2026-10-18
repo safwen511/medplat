@@ -1,10 +1,9 @@
 "use client";
 
-import { ArrowRight, Check, Clock, Flame, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Exercise } from "@/lib/content/types";
 import { useProgress } from "@/lib/progress/provider";
@@ -12,8 +11,8 @@ import type { Mode } from "@/lib/progress/store";
 import { cn } from "@/lib/utils";
 
 import { AnswerInput } from "./answers";
-import { emptyResponse, formatDuration, grade, isAnswerable, responsePayload, TYPE_LABELS, type Response } from "./grading";
-import { HintLadder } from "./hint-ladder";
+import { emptyResponse, grade, isAnswerable, responsePayload, spokenDuration, TYPE_LABELS, type Response } from "./grading";
+import { availableHints, HintLink, HintList } from "./hint-ladder";
 import { ReportError } from "./report-error";
 
 export interface AnswerResult {
@@ -27,8 +26,9 @@ export interface AnswerResult {
 }
 
 /**
- * One question: answer UI, hint ladder, submit, feedback. The timer runs from first display to
- * submit. Mount with `key={exercise.id}` so each question starts fresh.
+ * One question: answer UI, hints on request, submit, then inline feedback, explanation and a
+ * single "Suivant". The time runs from first display to submit (shown with the feedback when
+ * `showTimer`). Mount with `key={exercise.id}` so each question starts fresh.
  */
 export function QuestionCard({
   exercise,
@@ -57,9 +57,7 @@ export function QuestionCard({
   const [response, setResponse] = useState<Response>(() => emptyResponse(exercise));
   const [hintsUsed, setHintsUsed] = useState(0);
   const [result, setResult] = useState<AnswerResult | null>(null);
-  const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(0);
-  const feedbackRef = useRef<HTMLDivElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
   const submitted = result !== null;
 
@@ -68,14 +66,10 @@ export function QuestionCard({
   }, []);
 
   useEffect(() => {
-    if (submitted) return;
-    const timer = window.setInterval(() => setElapsed(performance.now() - startRef.current), 1000);
-    return () => window.clearInterval(timer);
-  }, [submitted]);
-
-  useEffect(() => {
     if (!submitted) return;
-    feedbackRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    // Bring the verdict, explanation and "Suivant" into view (the button last, above the phone nav).
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    nextRef.current?.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
     nextRef.current?.focus({ preventScroll: true });
   }, [submitted]);
 
@@ -86,7 +80,6 @@ export function QuestionCard({
     const timeMs = performance.now() - startRef.current;
     const { correct, score, total } = grade(exercise, response);
     const next: AnswerResult = { exercise, correct, score, total, timeMs, hintsUsed, response };
-    setElapsed(timeMs);
     setResult(next);
     onAnswered?.(next);
     void store
@@ -107,28 +100,17 @@ export function QuestionCard({
       });
   };
 
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-2">
-        {header}
-        <Badge tone="primary">{TYPE_LABELS[exercise.type]}</Badge>
-        {exercise.highYield && (
-          <Badge tone="highyield">
-            <Flame aria-hidden /> Tombe souvent
-          </Badge>
-        )}
-        {showTimer && (
-          <span
-            className="ml-auto inline-flex items-center gap-1 text-xs tabular-nums text-muted/80"
-            aria-label={`Temps écoulé : ${formatDuration(elapsed)}`}
-          >
-            <Clock className="size-3" aria-hidden />
-            {formatDuration(elapsed)}
-          </span>
-        )}
-      </div>
+  const hintCount = hints ? availableHints(exercise.hints) : 0;
+  const unit = unitLabel(exercise);
 
-      <h3 className="whitespace-pre-line text-lg font-semibold leading-snug sm:text-xl">{exercise.stem}</h3>
+  return (
+    <div className="flex flex-col gap-6">
+      {header}
+      {/* Weight 500 (inline: globals.css sets h3 to 600): long stems stay easy to read. */}
+      <h3 className="whitespace-pre-line text-[1.375rem] leading-snug sm:text-[1.5rem]" style={{ fontWeight: 500 }}>
+        <span className="sr-only">{TYPE_LABELS[exercise.type]} : </span>
+        {exercise.stem}
+      </h3>
 
       <AnswerInput
         exercise={exercise}
@@ -138,66 +120,59 @@ export function QuestionCard({
         onSubmit={submit}
       />
 
-      {hints && (
-        <HintLadder
-          hints={exercise.hints}
-          used={hintsUsed}
-          onReveal={() => setHintsUsed((count) => Math.min(3, count + 1))}
-          disabled={submitted}
-        />
-      )}
+      {hintCount > 0 && <HintList hints={exercise.hints} used={hintsUsed} />}
 
       {result ? (
         <motion.div
-          ref={feedbackRef}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: [0.2, 0, 0, 1] }}
-          className={cn(
-            "flex flex-col gap-3 rounded-card border p-4 sm:p-5",
-            result.correct ? "border-correct/40 bg-correct-soft" : "border-wrong/40 bg-wrong-soft",
-          )}
+          transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+          className="flex flex-col gap-3"
           role="status"
         >
-          <div className="flex flex-wrap items-center gap-3">
-            <motion.span
-              initial={{ scale: 0.6 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 420, damping: 18 }}
-              className={cn(
-                "flex size-9 items-center justify-center rounded-full text-surface",
-                result.correct ? "bg-correct" : "bg-wrong",
-              )}
-            >
-              {result.correct ? (
-                <Check className="size-5" strokeWidth={3} aria-hidden />
-              ) : (
-                <X className="size-5" strokeWidth={3} aria-hidden />
-              )}
-            </motion.span>
-            <p className="text-base font-semibold">{result.correct ? "Bonne réponse" : "Réponse incorrecte"}</p>
-            {result.total > 1 && (
-              <span className="rounded-full bg-surface/70 px-2.5 py-0.5 text-xs font-medium text-muted">
-                {result.score}/{result.total} {unitLabel(exercise)}
+          <p
+            className={cn(
+              "flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-medium",
+              result.correct ? "text-correct" : "text-wrong",
+            )}
+          >
+            {result.correct ? (
+              <Check className="size-5" strokeWidth={2} aria-hidden />
+            ) : (
+              <X className="size-5" strokeWidth={2} aria-hidden />
+            )}
+            {result.correct ? "Bonne réponse" : "Réponse incorrecte"}
+            {(result.total > 1 || showTimer) && (
+              <span className="text-base font-normal text-muted">
+                {result.total > 1 && ` · ${result.score}/${result.total}${unit ? ` ${unit}` : ""}`}
+                {showTimer && ` · ${spokenDuration(result.timeMs)}`}
               </span>
             )}
-          </div>
+          </p>
           {exercise.explanation && (
-            <p className="whitespace-pre-line text-[0.95rem] leading-relaxed text-foreground">{exercise.explanation}</p>
+            <p className="whitespace-pre-line text-base leading-relaxed text-foreground">{exercise.explanation}</p>
           )}
-          {exercise.citations && <p className="text-xs text-muted">Sources : {exercise.citations}</p>}
+          {exercise.citations && <p className="text-sm text-muted">Sources : {exercise.citations}</p>}
+          <ReportError lessonId={exercise.lessonId} questionId={exercise.id} />
         </motion.div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <ReportError lessonId={exercise.lessonId} questionId={exercise.id} />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        {!submitted && hintCount > 0 ? (
+          <HintLink
+            used={hintsUsed}
+            available={hintCount}
+            onReveal={() => setHintsUsed((count) => Math.min(3, count + 1))}
+          />
+        ) : (
+          <span aria-hidden className="hidden sm:block" />
+        )}
         {submitted ? (
-          <Button ref={nextRef} size="lg" onClick={onNext}>
+          <Button ref={nextRef} size="lg" onClick={onNext} className="w-full scroll-mb-24 sm:w-auto sm:min-w-40">
             {nextLabel}
-            <ArrowRight aria-hidden />
           </Button>
         ) : (
-          <Button size="lg" onClick={submit} disabled={!answerable}>
+          <Button size="lg" onClick={submit} disabled={!answerable} className="w-full sm:w-auto sm:min-w-40">
             Valider
           </Button>
         )}

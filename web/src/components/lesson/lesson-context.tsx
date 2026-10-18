@@ -12,7 +12,8 @@ interface LessonContextValue {
   year: string;
   status: LessonStatus | null;
   statusLoaded: boolean;
-  setStatus: (status: LessonStatus) => Promise<void>;
+  /** null resets the lesson to "Non lu". */
+  setStatus: (status: LessonStatus | null) => Promise<void>;
   highlights: Highlight[];
   addHighlight: (quote: string) => Promise<void>;
   removeHighlight: (id: string) => Promise<void>;
@@ -53,9 +54,10 @@ export function LessonProvider({
   }, [store, lessonId]);
 
   const setStatus = useCallback(
-    async (next: LessonStatus) => {
+    async (next: LessonStatus | null) => {
       setStatusState(next);
-      await store.setLessonStatus(lessonId, faculty, year, next);
+      if (next === null) await store.clearLessonStatus(lessonId);
+      else await store.setLessonStatus(lessonId, faculty, year, next);
     },
     [store, lessonId, faculty, year],
   );

@@ -1,7 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import type { Exercise } from "@/lib/content/types";
 
 import { AnswerInput } from "./answers";
@@ -11,22 +9,22 @@ import { emptyResponse, grade, TYPE_LABELS, type Response } from "./grading";
 /** Development only: each exercise shown already corrected, with a partly wrong demo response. */
 export function FeedbackPreview({ exercises }: { exercises: Exercise[] }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col divide-y divide-border border-y border-border">
       {exercises.map((exercise) => {
         const response = demoResponse(exercise);
         const result = grade(exercise, response);
         return (
-          <Card key={exercise.id} className="flex flex-col gap-4 p-5">
-            <div className="flex items-center gap-2">
-              <Badge tone="primary">{TYPE_LABELS[exercise.type]}</Badge>
+          <div key={exercise.id} className="flex flex-col gap-5 py-8">
+            <p className="flex items-center gap-2 text-sm text-muted">
+              {TYPE_LABELS[exercise.type]}
               <Mark state={result.correct ? "correct" : "wrong"} className="ml-auto" />
-              <span className="text-xs tabular-nums text-muted">
+              <span className="tabular-nums">
                 {result.score}/{result.total}
               </span>
-            </div>
-            <p className="font-semibold">{exercise.stem}</p>
+            </p>
+            <p className="font-serif text-[1.375rem] font-medium leading-snug">{exercise.stem}</p>
             <AnswerInput exercise={exercise} response={response} onChange={() => {}} submitted />
-          </Card>
+          </div>
         );
       })}
     </div>

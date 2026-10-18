@@ -84,9 +84,9 @@ function NumericAnswer({
       >
         <div
           className={cn(
-            "flex h-14 w-full max-w-xs items-center overflow-hidden rounded-card border-2 bg-surface transition-colors focus-within:border-primary",
+            "flex h-14 w-full max-w-xs items-center overflow-hidden rounded-card border bg-surface transition-colors duration-150 focus-within:border-primary",
             !submitted && "border-border",
-            submitted && (ok ? "border-correct bg-correct-soft" : "border-wrong bg-wrong-soft"),
+            submitted && (ok ? "border-correct/60 bg-correct-soft" : "border-wrong/60 bg-wrong-soft"),
           )}
         >
           <input
@@ -102,18 +102,18 @@ function NumericAnswer({
             className="h-full min-w-0 flex-1 bg-transparent px-4 text-xl tabular-nums focus:outline-none"
           />
           {exercise.unit && (
-            <span className="flex h-full items-center border-l border-border bg-surface-muted px-3 text-sm font-medium text-muted">
+            <span className="flex h-full items-center px-4 text-base text-muted">
               {exercise.unit}
             </span>
           )}
         </div>
         {submitted && <Mark state={ok ? "correct" : "wrong"} />}
       </form>
-      {invalid && !submitted && <p className="text-xs text-muted">Saisis un nombre (virgule ou point acceptés).</p>}
+      {invalid && !submitted && <p className="text-sm text-muted">Saisis un nombre (virgule ou point acceptés).</p>}
       {submitted && (
-        <p className="text-sm text-muted">
+        <p className="text-base text-muted">
           Valeur attendue :{" "}
-          <span className="font-semibold text-foreground">
+          <span className="font-medium text-foreground">
             {numberFormat.format(exercise.value)}
             {exercise.tolerance > 0 && ` ± ${numberFormat.format(exercise.tolerance)}`} {exercise.unit}
           </span>

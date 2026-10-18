@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, CheckCircle2, Flag, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -17,117 +17,96 @@ import { cn } from "@/lib/utils";
 
 import { useLesson } from "./lesson-context";
 
-const STEPS: { status: LessonStatus; label: string }[] = [
-  { status: "lu", label: "Lu" },
-  { status: "revise_1", label: "Révisé 1 fois" },
-  { status: "revise_2", label: "Révisé 2 fois" },
-  { status: "maitrise", label: "Maîtrisé" },
-];
+type Step = LessonStatus | "non_lu";
 
-const NEXT_ACTION: Record<LessonStatus | "none", { status: LessonStatus; label: string } | null> = {
-  none: { status: "lu", label: "Marquer comme lu" },
-  lu: { status: "revise_1", label: "Révisé 1 fois" },
-  revise_1: { status: "revise_2", label: "Révisé 2 fois" },
-  revise_2: { status: "maitrise", label: "Maîtrisé" },
+const STEPS: Step[] = ["non_lu", "lu", "revise_1", "revise_2", "maitrise"];
+
+export const STATUS_LABELS: Record<Step, string> = {
+  non_lu: "Non lu",
+  lu: "Lu",
+  revise_1: "Révisé 1×",
+  revise_2: "Révisé 2×",
+  maitrise: "Maîtrisé",
+};
+
+const NEXT_ACTION: Record<Step, { status: LessonStatus; label: string } | null> = {
+  non_lu: { status: "lu", label: "Marquer comme lu" },
+  lu: { status: "revise_1", label: "Marquer « Révisé 1× »" },
+  revise_1: { status: "revise_2", label: "Marquer « Révisé 2× »" },
+  revise_2: { status: "maitrise", label: "Marquer « Maîtrisé »" },
   maitrise: null,
 };
 
-function statusLabel(status: LessonStatus | null) {
-  return STEPS.find((step) => step.status === status)?.label ?? "Pas encore lu";
-}
+/** Quiet text-link look shared by the lesson's secondary actions (48px tap height). */
+export const textLink =
+  "inline-flex min-h-12 items-center rounded-card text-sm underline underline-offset-4 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
-/** Follow-up sheet: lu → révisé 1 fois → révisé 2 fois → maîtrisé. */
-export function StatusTracker({
-  variant = "card",
-  className,
-}: {
-  variant?: "card" | "compact";
-  className?: string;
-}) {
+/**
+ * Fiche de suivi as one quiet line: the current step as a word that opens the native list
+ * (Non lu → Lu → Révisé 1× → Révisé 2× → Maîtrisé, or back to « Non lu »), plus the next step
+ * as a text link.
+ */
+export function StatusTracker({ className }: { className?: string }) {
   const { status, statusLoaded, setStatus } = useLesson();
-  const next = NEXT_ACTION[status ?? "none"];
-  const currentIndex = STEPS.findIndex((step) => step.status === status);
-
-  if (variant === "compact") {
-    return (
-      <div className={cn("flex flex-wrap items-center gap-2", className)} aria-live="polite">
-        {statusLoaded && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium text-muted">
-            {status && <Check className="size-3 text-primary" aria-hidden />}
-            {statusLabel(status)}
-          </span>
-        )}
-        {statusLoaded && next && (
-          <Button size="sm" variant={status ? "outline" : "primary"} onClick={() => setStatus(next.status)}>
-            {next.label}
-          </Button>
-        )}
-      </div>
-    );
-  }
+  const selectId = useId();
+  const step: Step = status ?? "non_lu";
+  const next = NEXT_ACTION[step];
 
   return (
-    <section
-      aria-labelledby="fiche-de-suivi"
-      className={cn("rounded-card border border-border bg-surface p-4 font-sans sm:p-5", className)}
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="fiche-de-suivi" className="text-base font-semibold">
-          Fiche de suivi
-        </h2>
-        <p className="text-sm text-muted" aria-live="polite">
-          Statut :{" "}
-          <span className="font-medium text-foreground">{statusLoaded ? statusLabel(status) : "…"}</span>
-        </p>
-      </div>
-      <ol className="mt-4 grid grid-cols-4 gap-1.5" aria-label="Étapes de révision">
-        {STEPS.map((step, index) => {
-          const done = index <= currentIndex;
-          return (
-            <li key={step.status}>
-              <button
-                type="button"
-                aria-pressed={step.status === status}
-                onClick={() => setStatus(step.status)}
-                disabled={!statusLoaded}
-                className={cn(
-                  "flex w-full flex-col items-center gap-1.5 rounded-lg px-1 py-2 text-center text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  done ? "text-primary" : "text-muted hover:bg-surface-muted",
-                )}
-              >
-                <span
-                  className={cn(
-                    "h-1.5 w-full rounded-full transition-colors",
-                    done ? "bg-primary" : "bg-surface-muted",
-                  )}
-                  aria-hidden
-                />
-                <span className="flex items-center gap-1 leading-tight">
-                  {done && <Check className="size-3 shrink-0" aria-hidden />}
-                  {step.label}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-      <div className="mt-4">
-        {next ? (
-          <Button
-            onClick={() => setStatus(next.status)}
-            disabled={!statusLoaded}
-            className="w-full sm:w-auto"
+    <div className={cn("flex flex-wrap items-center gap-x-4 font-sans text-sm", className)} aria-live="polite">
+      <span className="inline-flex items-center">
+        <label htmlFor={selectId} className="text-muted">
+          Fiche de suivi :
+        </label>
+        {/* The visible word sizes the control; the native list (transparent) sits on top of it. */}
+        <span className="relative inline-flex h-12 items-center rounded-card pl-1.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+          <span
+            aria-hidden
+            className={cn(
+              "inline-flex items-center gap-1 font-medium underline decoration-border underline-offset-4",
+              step === "non_lu" ? "text-muted" : "text-foreground",
+            )}
           >
-            {next.label}
-          </Button>
-        ) : (
-          <p className="flex items-center gap-2 text-sm font-medium text-primary">
-            <CheckCircle2 className="size-4" aria-hidden />
-            Cours maîtrisé. Pense à le revoir avant l&apos;examen.
-          </p>
-        )}
-      </div>
-    </section>
+            {STATUS_LABELS[step]}
+            <ChevronDown className="size-3.5 text-muted" strokeWidth={1.5} />
+          </span>
+          <select
+            id={selectId}
+            value={step}
+            disabled={!statusLoaded}
+            onChange={(event) => {
+              const value = event.target.value as Step;
+              void setStatus(value === "non_lu" ? null : value);
+            }}
+            className="absolute inset-0 cursor-pointer appearance-none opacity-0 focus:outline-none disabled:cursor-default"
+          >
+            {STEPS.map((item) => (
+              <option key={item} value={item}>
+                {item === "non_lu" && status ? "Remettre à « Non lu »" : STATUS_LABELS[item]}
+              </option>
+            ))}
+          </select>
+        </span>
+      </span>
+      {statusLoaded && next && (
+        <button
+          type="button"
+          onClick={() => setStatus(next.status)}
+          className={cn(textLink, "text-primary decoration-primary/30 hover:decoration-current")}
+        >
+          {next.label}
+        </button>
+      )}
+      {statusLoaded && status && (
+        <button
+          type="button"
+          onClick={() => setStatus(null)}
+          className={cn(textLink, "text-muted decoration-border hover:text-foreground hover:decoration-current")}
+        >
+          Remettre à « Non lu »
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -163,15 +142,16 @@ export function ReportErrorButton({ className }: { className?: string }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className={cn("text-muted", className)}>
-          <Flag aria-hidden />
+        <button
+          type="button"
+          className={cn(textLink, "text-muted decoration-border hover:text-foreground hover:decoration-current", className)}
+        >
           Signaler une erreur
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent>
         {state === "sent" ? (
           <div className="flex flex-col items-start gap-3">
-            <CheckCircle2 className="size-8 text-primary" aria-hidden />
             <DialogTitle>Merci pour ton signalement</DialogTitle>
             <DialogDescription>
               Il sera transmis à l&apos;équipe qui relit les cours. Chaque signalement aide à fiabiliser le
@@ -198,15 +178,14 @@ export function ReportErrorButton({ className }: { className?: string }) {
               rows={5}
               maxLength={2000}
               required
-              className="w-full resize-y rounded-card border border-border bg-surface px-3 py-2 text-sm placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-full resize-y rounded-card border border-border bg-surface px-3 py-2 text-base placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="Section concernée, ce qui te semble faux, et la page du document original si tu l'as."
             />
             <p id={hintId} className="text-xs text-muted">
               Au moins 5 caractères. N&apos;indique pas d&apos;informations personnelles.
             </p>
             {state === "failed" && (
-              <p className="flex items-center gap-1.5 text-sm text-wrong" role="alert">
-                <AlertCircle className="size-4 shrink-0" aria-hidden />
+              <p className="text-sm text-muted" role="alert">
                 L&apos;envoi a échoué. Réessaie dans un instant.
               </p>
             )}

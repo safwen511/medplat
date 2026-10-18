@@ -5,11 +5,12 @@ import { cn } from "@/lib/utils";
 /** Feedback state of one answer unit after submission. "missed" = expected but not given. */
 export type MarkState = "correct" | "wrong" | "missed" | "neutral";
 
+/** Row styles after submission: muted green / red, only ever paired with a Mark icon. */
 export const markClasses: Record<MarkState, string> = {
-  correct: "border-correct bg-correct-soft text-foreground",
-  wrong: "border-wrong bg-wrong-soft text-foreground",
-  missed: "border-dashed border-correct bg-surface text-foreground",
-  neutral: "border-border bg-surface text-muted",
+  correct: "border-correct/60 bg-correct-soft text-foreground",
+  wrong: "border-wrong/60 bg-wrong-soft text-foreground",
+  missed: "border-dashed border-correct/70 bg-transparent text-foreground",
+  neutral: "border-border bg-transparent text-muted",
 };
 
 const labels: Record<MarkState, string> = {
@@ -19,22 +20,19 @@ const labels: Record<MarkState, string> = {
   neutral: "",
 };
 
-/** Check / X icon that always accompanies the correct / wrong colors (never color alone). */
+/** Thin check / cross that always accompanies the correct / wrong colours (never colour alone). */
 export function Mark({ state, className }: { state: MarkState; className?: string }) {
   if (state === "neutral") return null;
-  const good = state !== "wrong";
-  const Icon = good ? Check : X;
+  const Icon = state === "wrong" ? X : Check;
   return (
     <span
       className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-full",
-        state === "correct" && "bg-correct text-surface",
-        state === "missed" && "border-2 border-correct text-correct",
-        state === "wrong" && "bg-wrong text-surface",
+        "inline-flex size-6 shrink-0 items-center justify-center",
+        state === "wrong" ? "text-wrong" : "text-correct",
         className,
       )}
     >
-      <Icon className="size-3.5" strokeWidth={3} aria-hidden />
+      <Icon className="size-5" strokeWidth={2} aria-hidden />
       <span className="sr-only">{labels[state]}</span>
     </span>
   );

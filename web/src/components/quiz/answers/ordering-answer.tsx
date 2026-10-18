@@ -60,7 +60,7 @@ export function OrderingAnswer({
     <div className="flex flex-col gap-3">
       {!submitted && (
         <p className="text-sm text-muted">
-          Glisse les éléments avec la poignée, ou utilise les flèches pour les déplacer.
+          Glisse les éléments par la poignée, ou utilise les flèches.
         </p>
       )}
       <DndContext
@@ -120,9 +120,9 @@ function SortableRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
-        "flex items-center gap-2 rounded-card border bg-surface px-2 py-2 text-[0.95rem]",
-        isDragging ? "relative z-10 border-primary shadow-lg" : "border-border",
-        submitted && (ok ? "border-correct bg-correct-soft" : "border-wrong bg-wrong-soft"),
+        "flex min-h-14 items-center gap-1 rounded-card border bg-surface px-1 py-1 text-[1.0625rem] leading-snug",
+        isDragging ? "relative z-10 border-primary" : "border-border",
+        submitted && (ok ? "border-correct/60 bg-correct-soft" : "border-wrong/60 bg-wrong-soft"),
       )}
     >
       {!submitted ? (
@@ -132,18 +132,18 @@ function SortableRow({
           {...attributes}
           {...listeners}
           aria-label={`Déplacer « ${item.text} »`}
-          className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+          className="flex h-12 w-10 shrink-0 cursor-grab touch-none items-center justify-center rounded-card text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
         >
-          <GripVertical className="size-4" aria-hidden />
+          <GripVertical className="size-4" strokeWidth={1.5} aria-hidden />
         </button>
       ) : (
-        <Mark state={ok ? "correct" : "wrong"} className="mx-1.5" />
+        <Mark state={ok ? "correct" : "wrong"} className="mx-2" />
       )}
-      <span className="w-6 shrink-0 text-center text-sm font-semibold text-muted">{index + 1}</span>
-      <span className="flex-1 text-foreground">{item.text}</span>
+      <span className="w-6 shrink-0 text-center text-sm tabular-nums text-muted">{index + 1}</span>
+      <span className="flex-1 py-2 text-foreground">{item.text}</span>
       {submitted && !ok && (
-        <span className="shrink-0 rounded-md bg-surface px-2 py-0.5 text-xs text-muted">
-          place attendue : <span className="font-semibold text-foreground">{correctIndex + 1}</span>
+        <span className="shrink-0 px-2 text-sm text-muted">
+          attendu : <span className="font-medium text-foreground">{correctIndex + 1}</span>
         </span>
       )}
       {!submitted && (
@@ -153,18 +153,18 @@ function SortableRow({
             onClick={() => onMove(index - 1)}
             disabled={index === 0}
             aria-label={`Monter « ${item.text} »`}
-            className="flex size-9 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
+            className="flex h-12 w-10 items-center justify-center rounded-card text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
           >
-            <ChevronUp className="size-4" aria-hidden />
+            <ChevronUp className="size-5" strokeWidth={1.5} aria-hidden />
           </button>
           <button
             type="button"
             onClick={() => onMove(index + 1)}
             disabled={index === count - 1}
             aria-label={`Descendre « ${item.text} »`}
-            className="flex size-9 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
+            className="flex h-12 w-10 items-center justify-center rounded-card text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
           >
-            <ChevronDown className="size-4" aria-hidden />
+            <ChevronDown className="size-5" strokeWidth={1.5} aria-hidden />
           </button>
         </span>
       )}

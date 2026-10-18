@@ -11,6 +11,7 @@ export interface Profile {
   year: "dcem1" | "dcem2" | null;
   examDate: string | null; // YYYY-MM-DD
   onboarded: boolean;
+  dailyGoal?: number; // questions per day, default 20
 }
 
 export interface AttemptInput {
@@ -37,6 +38,13 @@ export interface LessonProgress {
   updatedAt: string;
 }
 
+export interface ErrorReport {
+  lessonId: string;
+  questionId: string | null;
+  message: string;
+  createdAt: string;
+}
+
 export interface Highlight {
   id: string;
   lessonId: string;
@@ -54,7 +62,11 @@ export interface ProgressStore {
   attempts(): Promise<Attempt[]>;
   lessonProgress(): Promise<Record<string, LessonProgress>>;
   setLessonStatus(lessonId: string, faculty: string, year: string, status: LessonStatus): Promise<void>;
+  /** Back to "Non lu": removes the lesson's follow-up record. */
+  clearLessonStatus(lessonId: string): Promise<void>;
   highlights(lessonId: string): Promise<Highlight[]>;
+  allHighlights(): Promise<Highlight[]>;
+  errorReports(): Promise<ErrorReport[]>;
   addHighlight(lessonId: string, quote: string, note?: string): Promise<void>;
   removeHighlight(id: string): Promise<void>;
   reportError(lessonId: string, questionId: string | null, message: string): Promise<void>;
@@ -108,8 +120,19 @@ export const localStore: ProgressStore = {
     progress[lessonId] = { lessonId, status, revisions, updatedAt: now() };
     write("lessonProgress", progress);
   },
+  async clearLessonStatus(lessonId) {
+    const progress = read<Record<string, LessonProgress>>("lessonProgress", {});
+    delete progress[lessonId];
+    write("lessonProgress", progress);
+  },
   async highlights(lessonId) {
     return read<Highlight[]>("highlights", []).filter((item) => item.lessonId === lessonId);
+  },
+  async allHighlights() {
+    return read<Highlight[]>("highlights", []);
+  },
+  async errorReports() {
+    return read<ErrorReport[]>("errorReports", []);
   },
   async addHighlight(lessonId, quote, note) {
     const items = read<Highlight[]>("highlights", []);
@@ -143,6 +166,7 @@ export function supabaseStore(client: SupabaseClient, userId: string): ProgressS
         year: data.year,
         examDate: data.exam_date,
         onboarded: Boolean(data.onboarded_at),
+        dailyGoal: data.daily_goal ?? 20,
       };
     },
     async saveProfile(profile) {
@@ -153,9 +177,12 @@ export function supabaseStore(client: SupabaseClient, userId: string): ProgressS
           faculty: profile.faculty,
           year: profile.year,
           exam_date: profile.examDate,
-          onboarded_at: profile.onboarded ? now() : null,
+          daily_goal: profile.dailyGoal ?? 20,
         })
         .eq("id", userId);
+      // Keep the first onboarding date; set it only once.
+      if (profile.onboarded)
+        await client.from("profiles").update({ onboarded_at: now() }).eq("id", userId).is("onboarded_at", null);
     },
     async recordAttempt(attempt) {
       await client.from("attempts").insert({
@@ -205,6 +232,28 @@ export function supabaseStore(client: SupabaseClient, userId: string): ProgressS
         { lesson_id: lessonId, faculty, year, status, revisions: STATUS_ORDER.indexOf(status) },
         { onConflict: "user_id,lesson_id" },
       );
+    },
+    async clearLessonStatus(lessonId) {
+      await client.from("lesson_progress").delete().eq("lesson_id", lessonId);
+    },
+    async allHighlights() {
+      const { data } = await client.from("highlights").select("*").order("created_at");
+      return (data ?? []).map((row) => ({
+        id: String(row.id),
+        lessonId: row.lesson_id,
+        quote: row.quote,
+        note: row.note,
+        createdAt: row.created_at,
+      }));
+    },
+    async errorReports() {
+      const { data } = await client.from("error_reports").select("*").order("created_at", { ascending: false });
+      return (data ?? []).map((row) => ({
+        lessonId: row.lesson_id,
+        questionId: row.question_id,
+        message: row.message,
+        createdAt: row.created_at,
+      }));
     },
     async highlights(lessonId) {
       const { data } = await client

@@ -1,4 +1,4 @@
-// Shared, server-safe lesson heading styles (used by server sections and foldable sections).
+// Shared, server-safe lesson heading styles (serif from globals.css for h2/h3) (used by server sections and foldable sections).
 
 import type { ReactNode } from "react";
 
@@ -17,13 +17,13 @@ export function SectionHeading({
 }
 
 export function headingClass(level: number) {
-  if (level <= 2) return "text-xl font-semibold tracking-tight text-foreground sm:text-2xl";
-  if (level === 3) return "text-lg font-semibold text-foreground";
-  return "font-sans text-base font-semibold text-foreground";
+  if (level <= 2) return "text-[1.625rem] leading-snug text-foreground sm:text-[1.75rem]";
+  if (level === 3) return "text-[1.3125rem] leading-snug text-foreground";
+  return "font-sans text-[1em] font-semibold text-foreground";
 }
 
 export function sectionSpacing(level: number) {
-  if (level <= 2) return "mt-12 first:mt-6";
-  if (level === 3) return "mt-8";
-  return "mt-6";
+  if (level <= 2) return "mt-16 first:mt-8";
+  if (level === 3) return "mt-10";
+  return "mt-8";
 }

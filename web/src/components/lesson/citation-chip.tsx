@@ -151,14 +151,15 @@ export function CitationChip({ refs, figures }: { refs: ChipRef[]; figures: Labe
         }}
         onBlur={onBlur}
         className={cn(
-          "mx-0.5 inline-flex select-none items-center gap-1 whitespace-nowrap rounded-md border px-1.5 align-[0.1em] font-sans text-[0.6875rem] font-medium leading-[1.4] tabular-nums transition-colors",
+          // Inline (not flex): the vertical padding widens the tap area without moving the text.
+          "mx-0.5 inline cursor-pointer select-none whitespace-nowrap rounded px-0.5 py-2.5 font-sans text-[0.75em] leading-none tabular-nums underline decoration-dotted underline-offset-[3px] transition-colors duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          open
-            ? "border-primary/40 bg-primary-soft text-primary"
-            : "border-border bg-surface-muted text-muted hover:border-primary/40 hover:text-primary",
+          open ? "text-foreground decoration-current" : "text-muted decoration-border hover:text-foreground",
         )}
       >
-        {figures.length > 0 && <ImageIcon className="size-3" aria-hidden />}
+        {figures.length > 0 && (
+          <ImageIcon className="mr-0.5 inline size-[1em] align-[-0.125em]" strokeWidth={1.5} aria-hidden />
+        )}
         {refs.map((ref) => `${ref.source} ${ref.short}`.trim()).join(" · ")}
       </button>
       {open &&
@@ -176,14 +177,12 @@ export function CitationChip({ refs, figures }: { refs: ChipRef[]; figures: Labe
               left: position?.left ?? 0,
               visibility: position ? "visible" : "hidden",
             }}
-            className="fixed z-50 w-[min(20rem,calc(100vw-1rem))] rounded-card border border-border bg-surface p-3 font-sans text-sm shadow-lg"
+            className="fixed z-50 w-[min(20rem,calc(100vw-1rem))] rounded-card border border-border bg-surface p-4 font-sans text-sm shadow-[0_4px_20px_rgb(0_0_0/0.06)]"
           >
-            <ul className="flex flex-col gap-2">
+            <ul className="flex flex-col gap-3">
               {refs.map((ref, index) => (
-                <li key={`${ref.source}-${index}`} className="flex gap-2">
-                  <span className="mt-0.5 h-fit shrink-0 rounded bg-primary-soft px-1.5 text-xs font-semibold text-primary">
-                    {ref.source}
-                  </span>
+                <li key={`${ref.source}-${index}`} className="flex gap-2.5">
+                  <span className="w-6 shrink-0 text-sm font-medium text-muted">{ref.source}</span>
                   <span className="min-w-0">
                     <span className="block leading-snug text-foreground">{ref.label}</span>
                     <span className="block text-xs text-muted">
@@ -195,8 +194,8 @@ export function CitationChip({ refs, figures }: { refs: ChipRef[]; figures: Labe
               ))}
             </ul>
             {figures.length > 0 && (
-              <div className="mt-3 border-t border-border pt-3">
-                <p className="mb-2 text-xs text-muted">Figures de ces pages</p>
+              <div className="mt-4 border-t border-border pt-3">
+                <p className="mb-2 text-sm text-muted">Figures de ces pages</p>
                 <div className="grid grid-cols-3 gap-2">
                   {figures.map((item) => (
                     <FigureThumb

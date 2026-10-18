@@ -43,14 +43,8 @@ export function ChoiceAnswer({
   return (
     <div className="flex flex-col gap-4">
       {exercise.type === "image" && <ZoomableFigure figure={exercise.figure} />}
-      {multiple && (
-        <p className="text-sm font-medium text-primary">Plusieurs réponses possibles</p>
-      )}
-      <div
-        role={multiple ? "group" : "radiogroup"}
-        aria-label="Propositions"
-        className="flex flex-col gap-2.5"
-      >
+      {multiple && !submitted && <p className="text-sm text-muted">Plusieurs réponses possibles.</p>}
+      <div role={multiple ? "group" : "radiogroup"} aria-label="Propositions" className="flex flex-col gap-2">
         {options.map((option) => {
           const isChosen = chosen.has(option.id);
           const state = submitted ? markOf(expected.has(option.id), isChosen) : "neutral";
@@ -63,30 +57,34 @@ export function ChoiceAnswer({
               aria-disabled={submitted}
               onClick={() => toggle(option.id)}
               className={cn(
-                "flex min-h-12 w-full items-center gap-3 rounded-card border px-4 py-3 text-left text-[0.95rem] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                !submitted && "hover:border-primary/60 hover:bg-surface-muted active:scale-[0.99]",
-                !submitted && isChosen && "border-primary bg-primary-soft shadow-sm",
-                !submitted && !isChosen && "border-border bg-surface",
+                "flex min-h-14 w-full items-center gap-4 rounded-card border px-4 py-3 text-left text-[1.0625rem] leading-snug transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                !submitted && isChosen && "border-primary bg-primary-soft",
+                !submitted && !isChosen && "border-border bg-surface hover:border-muted/50",
                 submitted && markClasses[state],
-                submitted && state === "neutral" && "opacity-70",
               )}
             >
               <span
                 aria-hidden
                 className={cn(
-                  "flex size-5 shrink-0 items-center justify-center border-2 transition-colors",
-                  multiple ? "rounded-md" : "rounded-full",
-                  isChosen ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface",
+                  "flex size-5 shrink-0 items-center justify-center border transition-colors duration-150",
+                  multiple ? "rounded-[5px]" : "rounded-full",
+                  isChosen ? "border-primary bg-primary text-primary-foreground" : "border-muted/60",
+                  submitted && !isChosen && "opacity-50",
                 )}
               >
                 {isChosen &&
                   (multiple ? (
-                    <Check className="size-3.5" strokeWidth={3} />
+                    <Check className="size-3.5" strokeWidth={2.5} />
                   ) : (
                     <span className="size-2 rounded-full bg-primary-foreground" />
                   ))}
               </span>
-              <span className="flex-1 text-foreground">{option.text}</span>
+              <span className={cn("flex-1", state === "neutral" && submitted ? "text-muted" : "text-foreground")}>
+                {option.text}
+                {state === "missed" && (
+                  <span className="mt-0.5 block text-sm text-correct">Réponse attendue</span>
+                )}
+              </span>
               {submitted && <Mark state={state} />}
             </button>
           );
@@ -103,8 +101,7 @@ export function ZoomableFigure({ figure }: { figure: Figure }) {
       <DialogTrigger asChild>
         <button
           type="button"
-          className="group relative overflow-hidden rounded-card border border-border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Agrandir la figure"
+          className="group flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-card"
         >
           <Image
             src={figure.src}
@@ -112,10 +109,10 @@ export function ZoomableFigure({ figure }: { figure: Figure }) {
             width={figure.width}
             height={figure.height}
             unoptimized={unoptimized}
-            className="h-auto max-h-[60vh] w-full object-contain"
+            className="h-auto max-h-[60vh] w-full rounded-card border border-border object-contain"
           />
-          <span className="absolute bottom-2 right-2 inline-flex items-center gap-1 rounded-full bg-surface/90 px-2.5 py-1 text-xs text-muted shadow-sm transition-colors group-hover:text-foreground">
-            <ZoomIn className="size-3.5" aria-hidden /> Agrandir
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted group-hover:text-foreground">
+            <ZoomIn className="size-4" strokeWidth={1.5} aria-hidden /> Agrandir la figure
           </span>
         </button>
       </DialogTrigger>

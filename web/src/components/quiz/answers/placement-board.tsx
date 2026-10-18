@@ -106,19 +106,22 @@ export function PlacementBoard({
   );
 
   const poolArea = (
-    <DropZone
-      id={POOL}
-      disabled={submitted}
-      onActivate={selected && placement[selected] ? () => place(selected, null) : undefined}
-      className="flex min-h-16 flex-col gap-2 rounded-card border border-dashed border-border bg-surface-muted/60 p-3"
-    >
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{poolLabel}</p>
-      <div className={cn("flex gap-2", layout === "columns" ? "flex-col" : "flex-wrap")}>
-        {pool.map((chip) => chipButton(chip, false))}
-        {pool.length === 0 && (
-          <p className="text-sm text-muted">Tout est placé. Tu peux valider.</p>
-        )}
-      </div>
+    <DropZone id={POOL} disabled={submitted} onActivate={selected && placement[selected] ? () => place(selected, null) : undefined}>
+      {(active) => (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-muted">{poolLabel}</p>
+          <div
+            className={cn(
+              "flex min-h-14 gap-2 rounded-card border border-dashed p-2 transition-colors duration-150",
+              layout === "columns" ? "flex-col" : "flex-wrap",
+              active ? "border-primary bg-primary-soft" : "border-transparent",
+            )}
+          >
+            {pool.map((chip) => chipButton(chip, false))}
+            {pool.length === 0 && <p className="px-1 py-2 text-sm text-muted">Tout est placé.</p>}
+          </div>
+        </div>
+      )}
     </DropZone>
   );
 
@@ -128,35 +131,45 @@ export function PlacementBoard({
       submitted && capacity === 1 && !placed.some((chip) => expected[chip.id] === target.id)
         ? chips.find((chip) => expected[chip.id] === target.id)
         : undefined;
+    const activatable = selected !== null && !submitted;
     return (
       <DropZone
         key={target.id}
         id={target.id}
         disabled={submitted}
-        highlight={selected !== null}
         onActivate={selected ? () => place(selected, target.id) : undefined}
-        className="flex min-h-16 flex-col gap-2 rounded-card border border-border bg-surface p-3"
       >
-        <button
-          type="button"
-          disabled={submitted}
-          aria-label={
-            selected ? `Placer « ${byId[selected]?.text} » dans « ${target.text} »` : `Destination : ${target.text}`
-          }
-          className="text-left text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
-        >
-          {target.text}
-        </button>
-        <div className="flex flex-wrap gap-2">
-          {placed.map((chip) => chipButton(chip, true))}
-          {placed.length === 0 && !submitted && (
-            <span className="text-xs text-muted">{selected ? "Touche pour placer ici" : "Dépose un élément ici"}</span>
-          )}
-        </div>
-        {missing && (
-          <p className="text-xs text-muted">
-            Attendu : <span className="font-medium text-foreground">{missing.text}</span>
-          </p>
+        {(active) => (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              disabled={submitted}
+              aria-label={
+                selected ? `Placer « ${byId[selected]?.text} » dans « ${target.text} »` : `Destination : ${target.text}`
+              }
+              className="rounded-card text-left text-base font-medium leading-snug text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+            >
+              {target.text}
+            </button>
+            <div
+              className={cn(
+                "flex min-h-14 flex-wrap items-center gap-2 rounded-card border p-2 transition-colors duration-150",
+                submitted ? "border-transparent p-0" : "border-dashed",
+                !submitted && (active ? "border-primary bg-primary-soft" : activatable ? "cursor-pointer border-primary/60" : "border-border"),
+              )}
+            >
+              {placed.map((chip) => chipButton(chip, true))}
+              {placed.length === 0 && !submitted && (
+                <span className="px-1 text-sm text-muted">{selected ? "Touche pour placer ici" : "Dépose ici"}</span>
+              )}
+              {placed.length === 0 && submitted && <span className="text-sm text-muted">Rien de placé</span>}
+            </div>
+            {missing && (
+              <p className="text-sm text-muted">
+                Attendu : <span className="text-correct">{missing.text}</span>
+              </p>
+            )}
+          </div>
         )}
       </DropZone>
     );
@@ -165,24 +178,22 @@ export function PlacementBoard({
   return (
     <DndContext id={dndId} sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
       {!submitted && (
-        <p className="mb-3 text-sm text-muted">
-          Glisse chaque élément vers sa place, ou touche un élément puis sa destination.
-        </p>
+        <p className="mb-4 text-sm text-muted">Glisse chaque élément vers sa place, ou touche un élément puis sa destination.</p>
       )}
       {layout === "columns" ? (
-        <div className={cn("grid gap-3", showPool && "grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]")}>
-          <div className="flex flex-col gap-2.5">{targets.map(targetArea)}</div>
-          {showPool && <div className="sticky top-4 self-start">{poolArea}</div>}
+        <div className={cn("grid gap-6", showPool && "grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]")}>
+          <div className="flex flex-col gap-5">{targets.map(targetArea)}</div>
+          {showPool && <div className="sticky top-20 self-start">{poolArea}</div>}
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-6">
           {showPool && poolArea}
-          <div className={cn("grid gap-3", targets.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+          <div className={cn("grid gap-5", targets.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
             {targets.map(targetArea)}
           </div>
         </div>
       )}
-      <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
+      <DragOverlay dropAnimation={{ duration: 160, easing: "cubic-bezier(0.2, 0, 0, 1)" }}>
         {dragging && byId[dragging] ? <ChipFace text={byId[dragging].text} lifted /> : null}
       </DragOverlay>
     </DndContext>
@@ -192,31 +203,18 @@ export function PlacementBoard({
 function DropZone({
   id,
   disabled,
-  highlight,
   onActivate,
-  className,
   children,
 }: {
   id: string;
   disabled: boolean;
-  highlight?: boolean;
   onActivate?: () => void;
-  className?: string;
-  children: ReactNode;
+  children: (active: boolean) => ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id, disabled });
   return (
-    <div
-      ref={setNodeRef}
-      onClick={onActivate}
-      className={cn(
-        "transition-[border-color,background-color,box-shadow] duration-150",
-        className,
-        highlight && onActivate && "cursor-pointer border-dashed border-primary/60",
-        isOver && "border-primary bg-primary-soft ring-2 ring-primary/30",
-      )}
-    >
-      {children}
+    <div ref={setNodeRef} onClick={onActivate}>
+      {children(isOver)}
     </div>
   );
 }
@@ -242,16 +240,16 @@ function DraggableChip({
       <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
         <span
           className={cn(
-            "inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-sm text-foreground",
-            result.ok ? "border-correct bg-correct-soft" : "border-wrong bg-wrong-soft",
+            "inline-flex min-h-12 items-center gap-2 rounded-card border px-3 py-2 text-base text-foreground",
+            result.ok ? "border-correct/60 bg-correct-soft" : "border-wrong/60 bg-wrong-soft",
           )}
         >
-          <Mark state={result.ok ? "correct" : "wrong"} className="size-5" />
+          <Mark state={result.ok ? "correct" : "wrong"} />
           {chip.text}
         </span>
         {!result.ok && result.expected && (
-          <span className="text-xs text-muted">
-            → <span className="font-medium text-foreground">{result.expected}</span>
+          <span className="text-sm text-muted">
+            attendu : <span className="text-correct">{result.expected}</span>
           </span>
         )}
       </span>
@@ -271,7 +269,7 @@ function DraggableChip({
           event.stopPropagation();
           onSelect();
         }}
-        className="rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-card text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <ChipFace text={chip.text} selected={selected} />
       </button>
@@ -283,9 +281,9 @@ function DraggableChip({
             onReturn();
           }}
           aria-label={`Retirer « ${chip.text} »`}
-          className="rounded-lg px-1.5 text-muted hover:bg-surface-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-h-12 w-10 items-center justify-center rounded-card text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Undo2 className="size-3.5" aria-hidden />
+          <Undo2 className="size-4" strokeWidth={1.5} aria-hidden />
         </button>
       )}
     </div>
@@ -296,12 +294,12 @@ function ChipFace({ text, selected, lifted }: { text: string; selected?: boolean
   return (
     <span
       className={cn(
-        "flex min-h-10 cursor-grab touch-manipulation select-none items-center gap-2 rounded-lg border bg-surface px-3 py-2 text-sm text-foreground transition-all duration-150",
-        selected ? "border-primary bg-primary-soft ring-2 ring-primary/30" : "border-border shadow-sm",
-        lifted && "cursor-grabbing border-primary shadow-lg",
+        "flex min-h-12 cursor-grab touch-manipulation select-none items-center gap-2 rounded-card border bg-surface px-3 py-2 text-base leading-snug text-foreground transition-colors duration-150",
+        selected ? "border-primary bg-primary-soft" : "border-border",
+        lifted && "cursor-grabbing border-primary",
       )}
     >
-      <GripVertical className="size-3.5 shrink-0 text-muted" aria-hidden />
+      <GripVertical className="size-4 shrink-0 text-muted" strokeWidth={1.5} aria-hidden />
       {text}
     </span>
   );

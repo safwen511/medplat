@@ -172,6 +172,14 @@ export function formatDuration(ms: number) {
   return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+/** Duration for sentences: "12 s", "4 min 12 s", "4 min". */
+export function spokenDuration(ms: number) {
+  const seconds = Math.max(0, Math.round(ms / 1000));
+  const minutes = Math.floor(seconds / 60);
+  if (minutes === 0) return `${seconds} s`;
+  return seconds % 60 ? `${minutes} min ${seconds % 60} s` : `${minutes} min`;
+}
+
 export function median(values: number[]) {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);

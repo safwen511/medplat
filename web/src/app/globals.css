@@ -1,68 +1,73 @@
 @import "tailwindcss";
 
-/* MedPlat design tokens. Deep teal = trust and care; mint = correct; coral = wrong;
-   amber = high-yield ("tombe souvent"). Correct/wrong are always paired with an icon too. */
+/* MedPlat tokens — see docs/design.md. Calm and quiet: warm off-white page, near-black text,
+   ONE accent (primary action and current selection only), muted green/red for answer feedback
+   only. No gradients, no glow. One radius everywhere. */
 :root {
-  --background: #f6f9fa;
-  --surface: #ffffff;
-  --surface-muted: #eef3f5;
-  --foreground: #0f1f2a;
-  --muted: #5a6b76;
-  --border: #dbe4e8;
-  --primary: #0b6e74;
-  --primary-hover: #095b60;
-  --primary-soft: #e0f1f2;
-  --primary-foreground: #ffffff;
-  --correct: #1f9d6b;
-  --correct-soft: #e2f6ee;
-  --wrong: #d9534f;
-  --wrong-soft: #fbe8e7;
-  --highyield: #b7791f;
-  --highyield-soft: #fdf3e1;
-  --ring: #0b6e74;
-  --radius: 0.75rem;
+  color-scheme: light;
+  --background: #faf8f4;
+  --surface: #fffefb;
+  --surface-muted: #f2efe9;
+  --foreground: #23211e;
+  --muted: #6e6960;
+  --border: #e6e1d8;
+  --primary: #22625d;
+  --primary-hover: #1b4f4b;
+  --primary-soft: #e6efed;
+  --primary-foreground: #fffefb;
+  --correct: #3f7a57;
+  --correct-soft: #e7f0e9;
+  --wrong: #a5483f;
+  --wrong-soft: #f5e6e3;
+  /* High-yield is a quiet text marker, not a colour of its own. */
+  --highyield: #6e6960;
+  --highyield-soft: #f2efe9;
+  --ring: #22625d;
+  --radius: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: #0b141a;
-    --surface: #111d24;
-    --surface-muted: #16252e;
-    --foreground: #e5eef2;
-    --muted: #93a6b1;
-    --border: #22343e;
-    --primary: #3cb3b8;
-    --primary-hover: #5cc5c9;
-    --primary-soft: #12343a;
-    --primary-foreground: #04151a;
-    --correct: #43c08e;
-    --correct-soft: #10302a;
-    --wrong: #ef7a75;
-    --wrong-soft: #3a1c1d;
-    --highyield: #e3a94b;
-    --highyield-soft: #33270f;
-    --ring: #3cb3b8;
+    color-scheme: dark;
+    --background: #1f1d1b;
+    --surface: #282623;
+    --surface-muted: #2f2c29;
+    --foreground: #ece8e1;
+    --muted: #a59f95;
+    --border: #3a3732;
+    --primary: #7cb8b0;
+    --primary-hover: #95c8c1;
+    --primary-soft: #2b3a38;
+    --primary-foreground: #1a1918;
+    --correct: #86bf98;
+    --correct-soft: #283a2e;
+    --wrong: #e0928a;
+    --wrong-soft: #402a27;
+    --highyield: #a59f95;
+    --highyield-soft: #2f2c29;
+    --ring: #7cb8b0;
   }
 }
 
 :root.dark {
-  --background: #0b141a;
-  --surface: #111d24;
-  --surface-muted: #16252e;
-  --foreground: #e5eef2;
-  --muted: #93a6b1;
-  --border: #22343e;
-  --primary: #3cb3b8;
-  --primary-hover: #5cc5c9;
-  --primary-soft: #12343a;
-  --primary-foreground: #04151a;
-  --correct: #43c08e;
-  --correct-soft: #10302a;
-  --wrong: #ef7a75;
-  --wrong-soft: #3a1c1d;
-  --highyield: #e3a94b;
-  --highyield-soft: #33270f;
-  --ring: #3cb3b8;
+  color-scheme: dark;
+  --background: #1f1d1b;
+  --surface: #282623;
+  --surface-muted: #2f2c29;
+  --foreground: #ece8e1;
+  --muted: #a59f95;
+  --border: #3a3732;
+  --primary: #7cb8b0;
+  --primary-hover: #95c8c1;
+  --primary-soft: #2b3a38;
+  --primary-foreground: #1a1918;
+  --correct: #86bf98;
+  --correct-soft: #283a2e;
+  --wrong: #e0928a;
+  --wrong-soft: #402a27;
+  --highyield: #a59f95;
+  --highyield-soft: #2f2c29;
+  --ring: #7cb8b0;
 }
 
 @theme inline {
@@ -84,28 +89,43 @@
   --color-highyield-soft: var(--highyield-soft);
   --color-ring: var(--ring);
   --radius-card: var(--radius);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-public-sans);
   --font-serif: var(--font-source-serif);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-public-sans), sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
 }
 
-/* Lesson reading typography */
-.lesson-prose {
-  font-family: var(--font-source-serif), Georgia, serif;
-  font-size: 1.0625rem;
-  line-height: 1.7;
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-source-serif), serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
 }
-.lesson-prose h1,
-.lesson-prose h2,
-.lesson-prose h3 {
-  font-family: var(--font-inter), system-ui, sans-serif;
+
+/* Lesson reading: body sans for legibility on tablets, serif headings. */
+.lesson-prose {
+  font-size: 1.0625rem;
+  line-height: 1.75;
 }
 
 ::selection {
-  background: var(--highyield-soft);
+  background: var(--primary-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

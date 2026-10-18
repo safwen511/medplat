@@ -10,13 +10,52 @@ export const DAILY_GOAL = 20;
 
 export const STATUS_STEPS: LessonStatus[] = ["lu", "revise_1", "revise_2", "maitrise"];
 
-export const STATUS_LABELS: Record<LessonStatus | "non_lu", string> = {
+/** Follow-up step of a lesson: "non_lu" is the absence of a follow-up record. */
+export type Step = LessonStatus | "non_lu";
+
+/** Non lu → Lu → Révisé 1× → Révisé 2× → Maîtrisé. */
+export const STEPS: Step[] = ["non_lu", ...STATUS_STEPS];
+
+export const STATUS_LABELS: Record<Step, string> = {
   non_lu: "Non lu",
   lu: "Lu",
   revise_1: "Révisé 1×",
   revise_2: "Révisé 2×",
   maitrise: "Maîtrisé",
 };
+
+export function stepOf(status: LessonStatus | null | undefined): Step {
+  return status ?? "non_lu";
+}
+
+/** The status to save for a step; null means "back to Non lu" (clear the record). */
+export function statusOf(step: Step): LessonStatus | null {
+  return step === "non_lu" ? null : step;
+}
+
+export function countSteps(statuses: (LessonStatus | null | undefined)[]): Record<Step, number> {
+  const counts: Record<Step, number> = { non_lu: 0, lu: 0, revise_1: 0, revise_2: 0, maitrise: 0 };
+  for (const status of statuses) counts[stepOf(status)]++;
+  return counts;
+}
+
+/** "x / y cours lus · z maîtrisés" for a set of lessons. */
+export function readingSummary(lessons: LessonSummary[], progress: Record<string, LessonProgress>) {
+  const counts = countSteps(lessons.map((lesson) => progress[lesson.id]?.status));
+  const total = lessons.length;
+  const read = total - counts.non_lu;
+  return {
+    total,
+    read,
+    mastered: counts.maitrise,
+    /** 0..100 */
+    percent: total ? (read / total) * 100 : 0,
+    text: `${read} / ${total} cours lus · ${counts.maitrise} maîtrisé${counts.maitrise > 1 ? "s" : ""}`,
+  };
+}
+
+/** Lessons linked to at least this many past papers are marked "souvent à l'examen". */
+export const HIGH_YIELD_THRESHOLD = 3;
 
 export interface LessonRef {
   lesson: LessonSummary;
@@ -44,7 +83,8 @@ export interface StudentData {
   progress: Record<string, LessonProgress>;
   /** Captured on load, so render never reads the clock (prerender-safe). */
   now: Date;
-  setStatus(lessonId: string, status: LessonStatus): Promise<void>;
+  /** Saves a status; null goes back to "Non lu" (the follow-up record is removed). */
+  setStatus(lessonId: string, status: LessonStatus | null): Promise<void>;
 }
 
 /** Loads the student's profile, attempts and lesson progress for one year, client-side. */
@@ -84,19 +124,22 @@ export function useStudentData(index: YearIndex): StudentData {
   }, [store, ready, index, lessons]);
 
   const setStatus = useCallback(
-    async (lessonId: string, status: LessonStatus) => {
+    async (lessonId: string, status: LessonStatus | null) => {
       const updatedAt = new Date().toISOString();
       let previous: LessonProgress | undefined;
       setState((current) => {
         previous = current.progress[lessonId];
-        const revisions = Math.max(previous?.revisions ?? 0, STATUS_STEPS.indexOf(status));
-        return {
-          ...current,
-          progress: { ...current.progress, [lessonId]: { lessonId, status, revisions, updatedAt } },
-        };
+        const progress = { ...current.progress };
+        if (status === null) delete progress[lessonId];
+        else {
+          const revisions = Math.max(previous?.revisions ?? 0, STATUS_STEPS.indexOf(status));
+          progress[lessonId] = { lessonId, status, revisions, updatedAt };
+        }
+        return { ...current, progress };
       });
       try {
-        await store.setLessonStatus(lessonId, index.faculty, index.year, status);
+        if (status === null) await store.clearLessonStatus(lessonId);
+        else await store.setLessonStatus(lessonId, index.faculty, index.year, status);
       } catch {
         setState((current) => {
           const progress = { ...current.progress };
@@ -222,4 +265,32 @@ export function lessonHref(index: YearIndex, lesson: LessonSummary): string {
 
 export function certifHref(index: YearIndex, certif: CertifSummary): string {
   return `/${index.faculty}/${index.year}/${certif.slug}`;
+}
+
+export function certifQuizHref(index: YearIndex, certif: CertifSummary): string {
+  return `/${index.faculty}/${index.year}/quiz?certif=${encodeURIComponent(certif.slug)}`;
+}
+
+export function yearHref(index: YearIndex): string {
+  return `/${index.faculty}/${index.year}`;
+}
+
+export function quizHref(index: YearIndex): string {
+  return `/${index.faculty}/${index.year}/quiz`;
+}
+
+/** Figures shown on the back of a lesson card, from its attempts and follow-up record. */
+export function lessonCardStats(attempts: Attempt[], record: LessonProgress | undefined, now: Date) {
+  const score = accuracy(attempts);
+  const times = attempts.map((item) => item.timeMs);
+  const last = [record?.updatedAt, attempts.at(-1)?.createdAt]
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+  return {
+    answered: score.total,
+    precision: score.percent,
+    meanTime: formatSeconds(times.length ? times.reduce((sum, value) => sum + value, 0) / times.length : null),
+    lastReview: last ? formatDate(last, now) : "—",
+  };
 }

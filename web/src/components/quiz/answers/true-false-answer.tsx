@@ -31,16 +31,14 @@ export function TrueFalseButtons({
             aria-disabled={revealed || disabled}
             onClick={() => !revealed && !disabled && onPick(choice)}
             className={cn(
-              "relative flex h-24 items-center justify-center gap-2 rounded-card border-2 text-lg font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-28",
-              !revealed && "hover:border-primary/60 active:scale-[0.98]",
-              !revealed && chosen && "border-primary bg-primary-soft text-primary shadow-sm",
-              !revealed && !chosen && "border-border bg-surface text-foreground",
+              "flex h-16 items-center justify-center gap-2 rounded-card border text-lg font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              !revealed && chosen && "border-primary bg-primary-soft text-primary",
+              !revealed && !chosen && "border-border bg-surface text-foreground hover:border-muted/50",
               revealed && markClasses[state],
-              revealed && state === "neutral" && "opacity-60",
             )}
           >
             {choice ? "Vrai" : "Faux"}
-            {revealed && <Mark state={state} className="absolute right-3 top-3" />}
+            {revealed && <Mark state={state} />}
           </button>
         );
       })}

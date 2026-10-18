@@ -1,4 +1,4 @@
-// Server-rendered lesson markdown: GFM tables, styled blocks and citation chips.
+// Server-rendered lesson markdown: GFM tables, quiet blocks and inline citations.
 
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -62,15 +62,15 @@ function components(lesson: Lesson): Components {
       const { refs, figures } = resolveCitation(inner, lesson);
       return <CitationChip refs={refs} figures={figures} />;
     },
-    p: (props) => <p className="my-4" {...omitNode(props)} />,
+    p: (props) => <p className="my-5" {...omitNode(props)} />,
     ul: (props) => (
-      <ul className="my-4 list-disc space-y-2 pl-6 marker:text-primary/70" {...omitNode(props)} />
+      <ul className="my-5 list-disc space-y-2.5 pl-6 marker:text-muted" {...omitNode(props)} />
     ),
-    ol: (props) => <ol className="my-4 list-decimal space-y-2 pl-6 marker:text-muted" {...omitNode(props)} />,
+    ol: (props) => <ol className="my-5 list-decimal space-y-2.5 pl-6 marker:text-muted" {...omitNode(props)} />,
     li: (props) => <li className="pl-1 [&>p]:my-1" {...omitNode(props)} />,
     blockquote: (props) => (
       <blockquote
-        className="my-4 rounded-r-lg border-l-4 border-primary/40 bg-primary-soft/50 px-4 py-1 text-[0.95em] text-muted"
+        className="my-6 border-l border-border pl-5 text-muted"
         {...omitNode(props)}
       />
     ),
@@ -92,23 +92,23 @@ function components(lesson: Lesson): Components {
     pre: (props) => (
       <pre className="my-4 overflow-x-auto rounded-lg bg-surface-muted p-3 text-sm" {...omitNode(props)} />
     ),
-    hr: () => <hr className="my-8 border-border" />,
+    hr: () => <hr className="my-12 border-border" />,
     table: (props) => (
-      <div className="my-5 overflow-x-auto rounded-card border border-border bg-surface">
+      <div className="my-8 overflow-x-auto [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]">
         <table
           className="w-full min-w-[32rem] border-collapse text-left text-[0.9375rem] leading-normal"
           {...omitNode(props)}
         />
       </div>
     ),
-    thead: (props) => <thead className="bg-surface-muted font-sans text-sm" {...omitNode(props)} />,
+    thead: (props) => <thead className="font-sans text-sm text-muted" {...omitNode(props)} />,
     tr: (props) => (
-      <tr className="border-b border-border last:border-b-0 even:bg-surface-muted/40" {...omitNode(props)} />
+      <tr className="border-b border-border" {...omitNode(props)} />
     ),
     th: (props) => (
-      <th className="px-3 py-2 align-bottom font-semibold text-foreground" {...omitNode(props)} />
+      <th className="py-2 pr-4 align-bottom font-medium" {...omitNode(props)} />
     ),
-    td: (props) => <td className="px-3 py-2 align-top" {...omitNode(props)} />,
+    td: (props) => <td className="py-3 pr-4 align-top" {...omitNode(props)} />,
   };
 }
 

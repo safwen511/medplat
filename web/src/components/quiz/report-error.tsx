@@ -1,6 +1,5 @@
 "use client";
 
-import { Check, Flag } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -36,9 +35,8 @@ export function ReportError({ lessonId, questionId }: { lessonId: string; questi
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded text-xs text-muted underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-h-10 items-center self-start rounded-card text-sm text-muted underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <Flag className="size-3" aria-hidden />
           Signaler une erreur
         </button>
       </DialogTrigger>
@@ -50,11 +48,8 @@ export function ReportError({ lessonId, questionId }: { lessonId: string; questi
         </DialogDescription>
         {state === "sent" ? (
           <div className="mt-5 flex flex-col gap-4">
-            <p className="flex items-center gap-2 rounded-card bg-correct-soft px-4 py-3 text-sm">
-              <Check className="size-4 text-correct" aria-hidden />
-              Merci, ton signalement a été enregistré.
-            </p>
-            <Button variant="secondary" className="self-end" onClick={() => setOpen(false)}>
+            <p className="text-base">Merci, ton signalement a été enregistré.</p>
+            <Button className="self-end" onClick={() => setOpen(false)}>
               Fermer
             </Button>
           </div>
@@ -76,10 +71,10 @@ export function ReportError({ lessonId, questionId }: { lessonId: string; questi
               rows={4}
               maxLength={2000}
               placeholder="Ex. : la proposition C me semble contredire le cours, page…"
-              className="w-full resize-y rounded-card border border-border bg-surface p-3 text-sm focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="w-full resize-y rounded-card border border-border bg-surface p-3 text-base focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
             {state === "failed" && (
-              <p className="text-xs text-muted">L&apos;envoi a échoué. Réessaie dans un instant.</p>
+              <p className="text-sm text-muted">L&apos;envoi a échoué. Réessaie dans un instant.</p>
             )}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>

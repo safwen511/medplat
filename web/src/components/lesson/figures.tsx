@@ -1,6 +1,5 @@
 "use client";
 
-import { ImageIcon } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -31,7 +30,7 @@ export function FigureThumb({
       type="button"
       onClick={() => onOpen(figure)}
       className={cn(
-        "group relative overflow-hidden rounded-lg border border-border bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "group flex flex-col gap-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-card",
         className,
       )}
       aria-label={`Agrandir la figure (${figureCaption(figure)})`}
@@ -41,10 +40,10 @@ export function FigureThumb({
         alt=""
         width={figure.width}
         height={figure.height}
-        sizes="160px"
-        className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-[1.03]"
+        sizes="(max-width: 640px) 50vw, 200px"
+        className="min-h-0 w-full flex-1 rounded-card border border-border bg-surface object-contain"
       />
-      <span className="absolute bottom-1 left-1 rounded bg-surface/90 px-1.5 py-0.5 font-sans text-[0.6875rem] leading-none text-muted">
+      <span className="font-sans text-sm leading-none text-muted group-hover:text-foreground">
         {figureCaption(figure)}
       </span>
     </button>
@@ -59,7 +58,7 @@ export function FigureDialog({ figure, onClose }: { figure: LabeledFigure | null
           <>
             <DialogTitle className="pr-8 text-base">Figure — {figureCaption(figure)}</DialogTitle>
             <DialogDescription className="mb-3">{figure.sourceLabel}</DialogDescription>
-            <div className="flex max-h-[75vh] justify-center overflow-auto rounded-lg bg-surface-muted">
+            <div className="flex max-h-[75vh] justify-center overflow-auto">
               <Image
                 src={figure.src}
                 alt={`Figure extraite de ${figure.sourceLabel}, ${figure.unit === "slide" ? "diapositive" : "page"} ${figure.page}`}
@@ -76,24 +75,23 @@ export function FigureDialog({ figure, onClose }: { figure: LabeledFigure | null
   );
 }
 
-/** Compact gallery of the figures cited in a section. */
+/** The figures cited in a section: a quiet row of images with their page, tap to enlarge. */
 export function FigureGallery({ figures }: { figures: LabeledFigure[] }) {
   const [open, setOpen] = useState<LabeledFigure | null>(null);
   if (figures.length === 0) return null;
   return (
-    <div className="mt-4 rounded-card border border-border bg-surface p-3" data-no-highlight>
-      <p className="mb-2 flex items-center gap-1.5 font-sans text-xs font-medium text-muted">
-        <ImageIcon className="size-3.5" aria-hidden />
-        Figures des pages citées ({figures.length})
-      </p>
-      <ul className="flex gap-2 overflow-x-auto pb-1">
+    <figure className="my-8" data-no-highlight>
+      <ul className="flex gap-4 overflow-x-auto pb-2 [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]">
         {figures.map((figure) => (
           <li key={figure.src} className="shrink-0">
-            <FigureThumb figure={figure} onOpen={setOpen} className="h-24 w-32" />
+            <FigureThumb figure={figure} onOpen={setOpen} className="h-40 w-48" />
           </li>
         ))}
       </ul>
+      <figcaption className="mt-2 font-sans text-sm text-muted">
+        {figures.length > 1 ? "Figures des pages citées" : "Figure de la page citée"} · touche pour agrandir
+      </figcaption>
       <FigureDialog figure={open} onClose={() => setOpen(null)} />
-    </div>
+    </figure>
   );
 }

@@ -60,6 +60,7 @@ export interface Lesson {
   markdown: string; // lesson.md body (front matter removed)
   sources: SourceRef[];
   figures: Figure[];
+  validationErrors?: string[]; // comparison drafts only; published lessons have none
 }
 
 // Exercises ---------------------------------------------------------------------------------

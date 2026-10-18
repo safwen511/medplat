@@ -1,13 +1,11 @@
 "use client";
 
-import { ArrowLeft, BookOpen, Check, ChevronDown, Flame, Gamepad2, ListOrdered, Play, Shuffle, Zap } from "lucide-react";
+import { Check as CheckIcon } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Exercise, YearIndex } from "@/lib/content/types";
 import { useProgress } from "@/lib/progress/provider";
 import { cn, shuffle } from "@/lib/utils";
@@ -18,13 +16,11 @@ import { QuestionPlayer } from "./question-player";
 
 const COUNTS = [5, 10, 20] as const;
 const TYPE_ORDER = Object.keys(TYPE_LABELS) as Exercise["type"][];
-const GAME_ICONS: Record<GameKind, ReactNode> = {
-  sprint: <Zap aria-hidden />,
-  association: <Shuffle aria-hidden />,
-  ordre: <ListOrdered aria-hidden />,
-};
 
-type View = { kind: "setup" } | { kind: "quiz"; items: Exercise[]; key: number } | { kind: "game"; game: GameKind; key: number };
+type View =
+  | { kind: "setup" }
+  | { kind: "quiz"; items: Exercise[]; key: number }
+  | { kind: "game"; game: GameKind; key: number };
 
 interface LessonInfo {
   id: string;
@@ -45,6 +41,7 @@ export function QuizSetup(props: { index: YearIndex; pool: Exercise[] }) {
 function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] }) {
   const { store } = useProgress();
   const [view, setView] = useState<View>({ kind: "setup" });
+  const rootRef = useRef<HTMLDivElement>(null);
   const requested = useSearchParams().get("certif");
   const [certifs, setCertifs] = useState<string[]>(() =>
     requested && index.certifs.some((certif) => certif.slug === requested) ? [requested] : [],
@@ -108,27 +105,33 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
     .map((id) => lessonInfo.get(id) ?? { id, title: id, certif: "", module: "Autres" })
     .filter((lesson) => certifs.length === 0 || certifs.includes(lesson.certif));
 
+  // Each screen starts at the top of the page.
+  const open = (next: View) => {
+    setView(next);
+    requestAnimationFrame(() => {
+      const top = rootRef.current?.getBoundingClientRect().top ?? 0;
+      if (top < 0) rootRef.current?.scrollIntoView({ block: "start" });
+    });
+  };
+
   const launch = () => {
     const seed = randomSeed();
-    setView({ kind: "quiz", items: shuffle(filtered, seed).slice(0, count), key: seed });
+    open({ kind: "quiz", items: shuffle(filtered, seed).slice(0, count), key: seed });
   };
 
   if (pool.length === 0) return <EmptyState index={index} />;
 
   if (view.kind === "quiz") {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-        <Button variant="ghost" size="sm" className="self-start" onClick={() => setView({ kind: "setup" })}>
-          <ArrowLeft aria-hidden />
-          Configuration
-        </Button>
+      <div ref={rootRef} className="mx-auto w-full max-w-[40rem] scroll-mt-20">
         <QuestionPlayer
           key={view.key}
           exercises={view.items}
           mode="quiz"
           faculty={index.faculty}
           year={index.year}
-          onFinish={() => setView({ kind: "setup" })}
+          onFinish={() => open({ kind: "setup" })}
+          onExit={() => open({ kind: "setup" })}
         />
       </div>
     );
@@ -136,198 +139,184 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
 
   if (view.kind === "game") {
     return (
-      <div className="mx-auto w-full max-w-3xl">
+      <div ref={rootRef} className="mx-auto w-full max-w-[40rem] scroll-mt-20">
         <Game
           key={view.key}
           kind={view.game}
           pool={scoped}
           faculty={index.faculty}
           year={index.year}
-          onExit={() => setView({ kind: "setup" })}
+          onExit={() => open({ kind: "setup" })}
         />
       </div>
     );
   }
 
+  const planned = Math.min(count, filtered.length);
+  const visibleCertifs = index.certifs.filter((certif) => certifCounts.has(certif.slug));
+  const visibleTypes = TYPE_ORDER.filter((type) => pool.some((exercise) => exercise.type === type));
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
-      <header className="flex flex-col gap-1">
+    <div ref={rootRef} className="mx-auto flex w-full max-w-[40rem] scroll-mt-20 flex-col gap-12">
+      <header className="flex flex-col gap-2">
         <p className="text-sm text-muted">{index.yearLabel}</p>
-        <h1 className="text-2xl font-semibold">Quiz</h1>
-        <p className="text-sm text-muted">Compose ta série : certificats, cours, types de questions.</p>
+        <h1 className="text-3xl">Quiz</h1>
       </header>
 
-      <Card>
-        <CardContent className="flex flex-col gap-6 pt-5">
-          <Field label="Certificats" hint={certifs.length === 0 ? "Tous" : undefined}>
-            <div className="flex flex-wrap gap-2">
-              {index.certifs
-                .filter((certif) => certifCounts.has(certif.slug))
-                .map((certif) => (
-                  <Chip
-                    key={certif.slug}
-                    pressed={certifs.includes(certif.slug)}
-                    onClick={() => {
-                      setCertifs(toggle(certifs, certif.slug));
-                      setLessons([]);
-                    }}
-                    count={certifCounts.get(certif.slug)}
-                  >
-                    {certif.title}
-                  </Chip>
-                ))}
-            </div>
+      <div className="flex flex-col gap-10">
+        {visibleCertifs.length > 1 && (
+          <Field label="Certificats" hint={certifs.length === 0 ? "tous" : undefined}>
+            <Choices>
+              {visibleCertifs.map((certif) => (
+                <Choice
+                  key={certif.slug}
+                  pressed={certifs.includes(certif.slug)}
+                  onClick={() => {
+                    setCertifs(toggle(certifs, certif.slug));
+                    setLessons([]);
+                  }}
+                  count={certifCounts.get(certif.slug)}
+                >
+                  {certif.title}
+                </Choice>
+              ))}
+            </Choices>
           </Field>
+        )}
 
-          <Field label="Cours" hint={lessons.length === 0 ? "Tous" : `${lessons.length} sélectionné${lessons.length > 1 ? "s" : ""}`}>
-            <button
-              type="button"
-              onClick={() => setShowLessons(!showLessons)}
-              aria-expanded={showLessons}
-              className="flex items-center gap-1.5 self-start rounded text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <Field
+          label="Cours"
+          hint={lessons.length === 0 ? "tous" : `${lessons.length} choisi${lessons.length > 1 ? "s" : ""}`}
+        >
+          <button
+            type="button"
+            onClick={() => setShowLessons(!showLessons)}
+            aria-expanded={showLessons}
+            aria-controls="quiz-cours"
+            className="-my-2 min-h-12 self-start -mx-1 rounded-card px-1 text-base text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {showLessons ? "Masquer la liste" : "Choisir des cours"}
+          </button>
+          {showLessons && (
+            <ul
+              id="quiz-cours"
+              className="flex max-h-[60vh] flex-col divide-y divide-border overflow-y-auto border-y border-border"
             >
-              <ChevronDown className={cn("size-4 transition-transform", showLessons && "rotate-180")} aria-hidden />
-              {showLessons ? "Masquer les cours" : "Choisir des cours"}
-            </button>
-            {showLessons && (
-              <ul className="flex max-h-72 flex-col gap-1 overflow-y-auto rounded-card border border-border p-2">
-                {lessonChoices.map((lesson) => {
-                  const checked = lessons.includes(lesson.id);
-                  return (
-                    <li key={lesson.id}>
-                      <button
-                        type="button"
-                        role="checkbox"
-                        aria-checked={checked}
-                        onClick={() => setLessons(toggle(lessons, lesson.id))}
-                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "flex size-5 shrink-0 items-center justify-center rounded border",
-                            checked ? "border-primary bg-primary text-primary-foreground" : "border-border",
-                          )}
-                        >
-                          {checked && <Check className="size-3.5" strokeWidth={3} />}
-                        </span>
-                        <span className="flex-1">
-                          {lesson.title}
-                          <span className="block text-xs text-muted">{lesson.module}</span>
-                        </span>
-                        <span className="text-xs tabular-nums text-muted">{lessonCounts.get(lesson.id)}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Field>
+              {lessonChoices.map((lesson) => {
+                const checked = lessons.includes(lesson.id);
+                return (
+                  <li key={lesson.id}>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={checked}
+                      onClick={() => setLessons(toggle(lessons, lesson.id))}
+                      className="flex min-h-14 w-full items-center gap-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Box checked={checked} />
+                      <span className="flex-1 leading-snug">
+                        {lesson.title}
+                        <span className="block text-sm text-muted">{lesson.module}</span>
+                      </span>
+                      <span className="text-sm tabular-nums text-muted">{lessonCounts.get(lesson.id)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Field>
 
-          <Field label="Types de questions" hint={types.length === 0 ? "Tous" : undefined}>
-            <div className="flex flex-wrap gap-2">
-              {TYPE_ORDER.filter((type) => pool.some((exercise) => exercise.type === type)).map((type) => (
-                <Chip
+        {visibleTypes.length > 1 && (
+          <Field label="Types de questions" hint={types.length === 0 ? "tous" : undefined}>
+            <Choices>
+              {visibleTypes.map((type) => (
+                <Choice
                   key={type}
                   pressed={types.includes(type)}
                   onClick={() => setTypes(toggle(types, type))}
                   count={typeCounts.get(type) ?? 0}
                 >
                   {TYPE_LABELS[type]}
-                </Chip>
+                </Choice>
               ))}
-            </div>
+            </Choices>
           </Field>
+        )}
 
-          <Field label="Nombre de questions">
-            <div role="radiogroup" aria-label="Nombre de questions" className="inline-flex self-start rounded-card bg-surface-muted p-1">
-              {COUNTS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={count === value}
-                  onClick={() => setCount(value)}
-                  className={cn(
-                    "h-9 min-w-14 rounded-[calc(var(--radius)-0.25rem)] px-4 text-sm font-medium tabular-nums transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    count === value ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground",
-                  )}
-                >
-                  {value}
-                </button>
-              ))}
-            </div>
-          </Field>
+        <Field label="Nombre de questions">
+          <Choices role="radiogroup" label="Nombre de questions">
+            {COUNTS.map((value) => (
+              <Choice key={value} radio pressed={count === value} onClick={() => setCount(value)}>
+                {value}
+              </Choice>
+            ))}
+          </Choices>
+        </Field>
 
-          <div className="flex flex-col gap-3">
-            <Toggle
+        <Field label="Affiner">
+          <div className="flex flex-col">
+            <Check
               checked={highYieldOnly}
               onChange={setHighYieldOnly}
-              label="Tombe souvent uniquement"
-              description="Questions sur les notions fréquentes aux examens."
-              icon={<Flame className="size-4 text-highyield" aria-hidden />}
+              label="Seulement ce qui tombe souvent à l'examen"
             />
-            <Toggle
+            <Check
               checked={mistakesOnly}
               onChange={setMistakesOnly}
-              label="Mes erreurs"
+              label="Seulement mes erreurs"
               description={
                 mistakes.size > 0
-                  ? `${mistakes.size} question${mistakes.size > 1 ? "s" : ""} ratée${mistakes.size > 1 ? "s" : ""} lors de la dernière tentative.`
-                  : "Aucune erreur enregistrée pour l'instant."
+                  ? `${mistakes.size} question${mistakes.size > 1 ? "s" : ""} ratée${mistakes.size > 1 ? "s" : ""} à la dernière tentative`
+                  : "Aucune erreur enregistrée pour l'instant"
               }
               disabled={mistakes.size === 0 && !mistakesOnly}
             />
           </div>
-        </CardContent>
-        <div className="flex flex-col gap-3 border-t border-border bg-surface-muted/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted" aria-live="polite">
-            {filtered.length === 0
-              ? "Aucune question ne correspond à ces filtres."
-              : `${Math.min(count, filtered.length)} question${Math.min(count, filtered.length) > 1 ? "s" : ""} sur ${filtered.length} disponible${filtered.length > 1 ? "s" : ""}`}
-          </p>
-          <Button size="lg" onClick={launch} disabled={filtered.length === 0}>
-            <Play aria-hidden />
-            Lancer le quiz
-          </Button>
-        </div>
-      </Card>
+        </Field>
+      </div>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <Gamepad2 className="size-5 text-primary" aria-hidden />
-          <h2 className="text-lg font-semibold">Mini-jeux</h2>
-        </div>
-        <p className="-mt-1 text-sm text-muted">Selon les certificats et cours choisis ci-dessus.</p>
-        <div className="grid gap-3 sm:grid-cols-3">
+      <div className="flex flex-col gap-3 sm:flex-row-reverse sm:items-center sm:justify-between">
+        <Button size="lg" onClick={launch} disabled={filtered.length === 0} className="w-full sm:w-auto sm:min-w-40">
+          Lancer
+        </Button>
+        <p className="text-base text-muted" aria-live="polite">
+          {filtered.length === 0
+            ? "Aucune question ne correspond à ces choix."
+            : `${planned} question${planned > 1 ? "s" : ""} sur ${filtered.length} disponible${filtered.length > 1 ? "s" : ""}.`}
+        </p>
+      </div>
+
+      <section id="mini-jeux" aria-labelledby="mini-jeux-titre" className="flex scroll-mt-24 flex-col gap-3 pt-4">
+        <h2 id="mini-jeux-titre" className="text-xl">
+          Mini-jeux
+        </h2>
+        <ul className="flex flex-col">
           {GAMES.map((game) => {
             const available = scoped.filter((exercise) => exercise.type === game.type).length;
             return (
-              <Card key={game.kind} className="flex flex-col">
-                <CardHeader>
-                  <span className="mb-2 flex size-9 items-center justify-center rounded-full bg-primary-soft text-primary [&_svg]:size-4.5">
-                    {GAME_ICONS[game.kind]}
-                  </span>
-                  <CardTitle>{game.title}</CardTitle>
-                  <CardDescription>{game.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="mt-auto flex items-center justify-between gap-2">
-                  <span className="text-xs text-muted">
-                    {available > 0 ? `${available} question${available > 1 ? "s" : ""}` : "Bientôt disponible"}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant={available > 0 ? "primary" : "secondary"}
-                    disabled={available === 0}
-                    onClick={() => setView({ kind: "game", game: game.kind, key: randomSeed() })}
+              <li key={game.kind}>
+                {available > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => open({ kind: "game", game: game.kind, key: randomSeed() })}
+                    className="group flex min-h-12 w-full flex-col items-start rounded-card py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    Jouer
-                  </Button>
-                </CardContent>
-              </Card>
+                    <span className="text-base text-primary underline decoration-primary/30 underline-offset-4 group-hover:decoration-current">
+                      {game.title}
+                    </span>
+                    <span className="text-sm text-muted">{game.description}</span>
+                  </button>
+                ) : (
+                  <p className="flex min-h-12 flex-col justify-center py-2">
+                    <span className="text-base text-muted">{game.title}</span>
+                    <span className="text-sm text-muted">Pas encore de questions de ce type.</span>
+                  </p>
+                )}
+              </li>
             );
           })}
-        </div>
+        </ul>
       </section>
     </div>
   );
@@ -335,20 +324,13 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
 
 function EmptyState({ index }: { index: YearIndex }) {
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-4 py-10 text-center">
-      <span className="flex size-14 items-center justify-center rounded-full bg-primary-soft text-primary">
-        <Gamepad2 className="size-7" aria-hidden />
-      </span>
-      <h1 className="text-2xl font-semibold">Les questions arrivent bientôt</h1>
-      <p className="text-sm leading-relaxed text-muted">
-        Les quiz et mini-jeux de {index.yearLabel} sont préparés à partir des cours reconstruits, puis vérifiés avant
-        d&apos;être publiés. Ils apparaîtront ici dès qu&apos;un cours sera prêt.
+    <div className="mx-auto flex w-full max-w-[40rem] flex-col items-start gap-4 py-10">
+      <h1 className="text-3xl">Les questions arrivent bientôt</h1>
+      <p className="text-base leading-relaxed text-muted">
+        Les quiz de {index.yearLabel} apparaîtront ici dès qu&apos;un cours sera prêt.
       </p>
-      <Button asChild variant="outline">
-        <Link href={`/${index.faculty}/${index.year}`}>
-          <BookOpen aria-hidden />
-          Parcourir les cours
-        </Link>
+      <Button asChild size="lg" className="mt-2">
+        <Link href={`/${index.faculty}/${index.year}`}>Parcourir les cours</Link>
       </Button>
     </div>
   );
@@ -356,94 +338,94 @@ function EmptyState({ index }: { index: YearIndex }) {
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <fieldset className="flex flex-col gap-2.5">
-      <legend className="mb-2.5 flex w-full items-baseline justify-between text-sm font-semibold">
+    <fieldset className="flex flex-col gap-3">
+      <legend className="mb-3 text-base font-medium">
         {label}
-        {hint && <span className="text-xs font-normal text-muted">{hint}</span>}
+        {hint && <span className="font-normal text-muted"> · {hint}</span>}
       </legend>
       {children}
     </fieldset>
   );
 }
 
-function Chip({
+function Choices({ role, label, children }: { role?: "radiogroup"; label?: string; children: ReactNode }) {
+  return (
+    <div role={role} aria-label={label} className="flex flex-wrap gap-2">
+      {children}
+    </div>
+  );
+}
+
+/** A simple choice: a hairline row that takes the accent when selected. */
+function Choice({
   pressed,
   onClick,
   count,
+  radio,
   children,
 }: {
   pressed: boolean;
   onClick: () => void;
   count?: number;
+  radio?: boolean;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
-      aria-pressed={pressed}
+      {...(radio ? { role: "radio", "aria-checked": pressed } : { "aria-pressed": pressed })}
       onClick={onClick}
       className={cn(
-        "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        pressed
-          ? "border-primary bg-primary-soft font-medium text-primary"
-          : "border-border bg-surface text-foreground hover:bg-surface-muted",
+        "inline-flex min-h-12 items-center gap-2 rounded-card border px-4 text-base transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        pressed ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:border-muted/50",
       )}
     >
-      {pressed && <Check className="size-3.5" strokeWidth={3} aria-hidden />}
       {children}
-      {count !== undefined && (
-        <Badge tone={pressed ? "primary" : "neutral"} className="px-1.5 py-0 tabular-nums">
-          {count}
-        </Badge>
-      )}
+      {count !== undefined && <span className={cn("text-sm tabular-nums", pressed ? "text-primary/80" : "text-muted")}>{count}</span>}
     </button>
   );
 }
 
-function Toggle({
+function Box({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-5 shrink-0 items-center justify-center rounded-[5px] border transition-colors duration-150",
+        checked ? "border-primary bg-primary text-primary-foreground" : "border-muted/60",
+      )}
+    >
+      {checked && <CheckIcon className="size-3.5" strokeWidth={2.5} />}
+    </span>
+  );
+}
+
+function Check({
   checked,
   onChange,
   label,
   description,
-  icon,
   disabled,
 }: {
   checked: boolean;
   onChange: (value: boolean) => void;
   label: string;
-  description: string;
-  icon?: ReactNode;
+  description?: string;
   disabled?: boolean;
 }) {
   return (
     <button
       type="button"
-      role="switch"
+      role="checkbox"
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 text-left transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+      className="flex min-h-12 items-center gap-4 rounded-card py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     >
-      <span className="flex flex-1 flex-col">
-        <span className="flex items-center gap-1.5 text-sm font-medium">
-          {icon}
-          {label}
-        </span>
-        <span className="text-xs text-muted">{description}</span>
-      </span>
-      <span
-        aria-hidden
-        className={cn(
-          "relative h-6 w-10 shrink-0 rounded-full transition-colors",
-          checked ? "bg-primary" : "bg-border",
-        )}
-      >
-        <span
-          className={cn(
-            "absolute top-0.5 size-5 rounded-full bg-surface shadow-sm transition-transform",
-            checked ? "translate-x-[1.125rem]" : "translate-x-0.5",
-          )}
-        />
+      <Box checked={checked} />
+      <span className="flex flex-col leading-snug">
+        <span className="text-base">{label}</span>
+        {description && <span className="text-sm text-muted">{description}</span>}
       </span>
     </button>
   );

@@ -1,20 +1,17 @@
 "use client";
 
-import { ArrowLeft, Flame, RotateCcw, Target, Timer, Trophy, Zap } from "lucide-react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import type { Exercise, TrueFalseExercise } from "@/lib/content/types";
 import { useProgress } from "@/lib/progress/provider";
-import { cn, shuffle } from "@/lib/utils";
+import { shuffle } from "@/lib/utils";
 
 import { TrueFalseButtons } from "./answers/true-false-answer";
-import { formatDuration, randomSeed } from "./grading";
+import { randomSeed, spokenDuration } from "./grading";
 import { QuestionCard, type AnswerResult } from "./question-card";
-import { Stat } from "./quiz-summary";
+import { TextAction, ThinBar } from "./quiet";
 
 export type GameKind = "sprint" | "association" | "ordre";
 
@@ -60,13 +57,16 @@ export function Game({
   const items = pool.filter((item) => item.type === game.type);
   return (
     <MotionConfig reducedMotion="user">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onExit}>
-            <ArrowLeft aria-hidden />
-            Jeux
-          </Button>
-          <h2 className="text-lg font-semibold">{game.title}</h2>
+      <div className="flex flex-col gap-8">
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="text-2xl">{game.title}</h2>
+          <button
+            type="button"
+            onClick={onExit}
+            className="-my-3 min-h-12 shrink-0 -mx-1 rounded-card px-1 text-sm text-muted underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Quitter
+          </button>
         </div>
         {kind === "sprint" ? (
           <Sprint
@@ -195,33 +195,25 @@ function Sprint({
 
   if (phase === "ready") {
     return (
-      <Card className="flex flex-col items-center gap-4 p-6 text-center sm:p-8">
-        <span className="flex size-12 items-center justify-center rounded-full bg-primary-soft text-primary">
-          <Zap className="size-6" aria-hidden />
-        </span>
-        <p className="max-w-sm text-sm text-muted">
-          {items.length} affirmation{items.length > 1 ? "s" : ""} disponible{items.length > 1 ? "s" : ""}. Réponds
-          vite : 60 secondes au total. Raccourcis clavier : V = vrai, F = faux.
+      <div className="flex flex-col items-start gap-6">
+        <p className="text-lg leading-relaxed">
+          {items.length} affirmation{items.length > 1 ? "s" : ""} disponible{items.length > 1 ? "s" : ""}. Réponds au
+          plus grand nombre en 60 secondes.
         </p>
-        <Button size="lg" onClick={start} disabled={items.length === 0}>
+        <p className="text-sm text-muted">Au clavier : V pour vrai, F pour faux.</p>
+        <Button size="lg" onClick={start} disabled={items.length === 0} className="w-full sm:w-auto sm:min-w-40">
           Commencer
         </Button>
-      </Card>
+      </div>
     );
   }
 
   if (phase === "over") {
     const accuracy = stats.answered ? Math.round((stats.correct / stats.answered) * 100) : 0;
     return (
-      <ScoreCard
-        score={stats.correct}
-        caption={left <= 0 ? "Temps écoulé" : "Toutes les affirmations ont été jouées"}
-        stats={[
-          { icon: <Target aria-hidden />, label: "Réponses", value: String(stats.answered) },
-          { icon: <Target aria-hidden />, label: "Précision", value: `${accuracy} %` },
-          { icon: <Flame aria-hidden />, label: "Meilleure série", value: String(stats.best) },
-          { icon: <Timer aria-hidden />, label: "Temps", value: formatDuration(SPRINT_MS - left) },
-        ]}
+      <GameOver
+        sentence={`${stats.correct} bonne${stats.correct > 1 ? "s" : ""} réponse${stats.correct > 1 ? "s" : ""} sur ${stats.answered}, en ${spokenDuration(SPRINT_MS - left)}.`}
+        detail={`${left <= 0 ? "Temps écoulé." : "Toutes les affirmations ont été jouées."} Précision ${accuracy} %, meilleure série ${stats.best}.`}
         onReplay={onReplay}
         onExit={onExit}
       />
@@ -229,52 +221,40 @@ function Sprint({
   }
 
   return (
-    <Card className="flex flex-col gap-5 p-5 sm:p-6">
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="inline-flex items-center gap-1.5 font-semibold tabular-nums">
-          <Timer className="size-4 text-muted" aria-hidden />
-          {Math.ceil(left / 1000)} s
-        </span>
-        <span className="tabular-nums text-muted">Score {stats.correct}</span>
-        <motion.span
-          key={stats.streak}
-          initial={{ scale: stats.streak > 0 ? 1.25 : 1 }}
-          animate={{ scale: 1 }}
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums",
-            stats.streak > 0 ? "bg-highyield-soft text-highyield" : "bg-surface-muted text-muted",
-          )}
-        >
-          <Flame className="size-3.5" aria-hidden />
-          Série {stats.streak}
-        </motion.span>
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3 text-sm tabular-nums text-muted">
+          <span>{Math.ceil(left / 1000)} s</span>
+          <span>
+            {stats.correct} juste{stats.correct > 1 ? "s" : ""}
+            {stats.streak > 1 && ` · série de ${stats.streak}`}
+          </span>
+        </div>
+        <ThinBar value={left / SPRINT_MS} label="Temps restant" />
       </div>
-      <Progress value={(left / SPRINT_MS) * 100} tone={left < 10_000 ? "highyield" : "primary"} className="h-1.5" />
       <AnimatePresence mode="wait" initial={false}>
         {exercise && (
           <motion.div
             key={exercise.id + index}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.16 }}
-            className="flex min-h-24 items-center"
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+            className="flex min-h-28 items-center"
           >
-            <p className="whitespace-pre-line text-lg font-semibold leading-snug sm:text-xl">{exercise.stem}</p>
+            <p className="whitespace-pre-line font-serif text-[1.375rem] font-medium leading-snug sm:text-[1.5rem]">
+              {exercise.stem}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
       {exercise && (
-        <TrueFalseButtons
-          value={flash?.value ?? null}
-          onPick={pick}
-          expected={flash ? exercise.answer : undefined}
-        />
+        <TrueFalseButtons value={flash?.value ?? null} onPick={pick} expected={flash ? exercise.answer : undefined} />
       )}
       <p className="sr-only" role="status">
         {flash ? (flash.correct ? "Bonne réponse" : "Réponse incorrecte") : ""}
       </p>
-    </Card>
+    </div>
   );
 }
 
@@ -314,7 +294,7 @@ function TimedRun({
   }, [over]);
 
   if (run.length === 0) {
-    return <Card className="p-6 text-center text-sm text-muted">Aucune question de ce type pour le moment.</Card>;
+    return <p className="text-base text-muted">Aucune question de ce type pour le moment.</p>;
   }
 
   if (over) {
@@ -322,24 +302,9 @@ function TimedRun({
     const units = results.reduce((sum, result) => sum + result.score, 0);
     const unitsTotal = results.reduce((sum, result) => sum + result.total, 0);
     return (
-      <ScoreCard
-        score={correct}
-        outOf={run.length}
-        caption="Série terminée"
-        stats={[
-          { icon: <Timer aria-hidden />, label: "Temps total", value: formatDuration(elapsed) },
-          {
-            icon: <Timer aria-hidden />,
-            label: "Par question",
-            value: formatDuration(elapsed / Math.max(1, results.length)),
-          },
-          { icon: <Target aria-hidden />, label: "Éléments justes", value: `${units}/${unitsTotal}` },
-          {
-            icon: <Target aria-hidden />,
-            label: "Précision",
-            value: `${unitsTotal ? Math.round((units / unitsTotal) * 100) : 0} %`,
-          },
-        ]}
+      <GameOver
+        sentence={`${correct} bonne${correct > 1 ? "s" : ""} réponse${correct > 1 ? "s" : ""} sur ${run.length}, en ${spokenDuration(elapsed)}.`}
+        detail={`${units} élément${units > 1 ? "s" : ""} bien placé${units > 1 ? "s" : ""} sur ${unitsTotal}.`}
         onReplay={onReplay}
         onExit={onExit}
       />
@@ -348,103 +313,79 @@ function TimedRun({
 
   const exercise = run[index];
   return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-col gap-2 border-b border-border bg-surface-muted/40 px-5 py-3">
-        <div className="flex items-center justify-between text-xs font-medium text-muted">
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between text-sm tabular-nums text-muted">
           <span>
-            {index + 1} / {run.length}
+            Question {index + 1} / {run.length}
           </span>
-          <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-foreground">
-            <Timer className="size-3.5 text-muted" aria-hidden />
-            {formatDuration(elapsed)}
-          </span>
+          <span>{spokenDuration(elapsed)}</span>
         </div>
-        <Progress value={(results.length / run.length) * 100} className="h-1.5" />
+        <ThinBar value={results.length / run.length} />
       </div>
-      <div className="p-5 sm:p-6">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={exercise.id + index}
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -16 }}
-            transition={{ duration: 0.2 }}
-          >
-            <QuestionCard
-              exercise={exercise}
-              mode="game"
-              faculty={faculty}
-              year={year}
-              hints={false}
-              showTimer={false}
-              nextLabel={index + 1 < run.length ? "Suivant" : "Voir le score"}
-              onAnswered={(result) => {
-                setResults((previous) => [...previous, result]);
-                if (index + 1 >= run.length) {
-                  endRef.current = performance.now();
-                  setElapsed(endRef.current - startRef.current);
-                }
-              }}
-              onNext={() => (index + 1 < run.length ? setIndex(index + 1) : setOver(true))}
-            />
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </Card>
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={exercise.id + index}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.18 }}
+        >
+          <QuestionCard
+            exercise={exercise}
+            mode="game"
+            faculty={faculty}
+            year={year}
+            hints={false}
+            showTimer={false}
+            nextLabel={index + 1 < run.length ? "Suivant" : "Voir le score"}
+            onAnswered={(result) => {
+              setResults((previous) => [...previous, result]);
+              if (index + 1 >= run.length) {
+                endRef.current = performance.now();
+                setElapsed(endRef.current - startRef.current);
+              }
+            }}
+            onNext={() => (index + 1 < run.length ? setIndex(index + 1) : setOver(true))}
+          />
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }
 
-// Score card ----------------------------------------------------------------------------------
+// End of a game --------------------------------------------------------------------------------
 
-function ScoreCard({
-  score,
-  outOf,
-  caption,
-  stats,
+function GameOver({
+  sentence,
+  detail,
   onReplay,
   onExit,
 }: {
-  score: number;
-  outOf?: number;
-  caption: string;
-  stats: { icon: ReactNode; label: string; value: string }[];
+  sentence: string;
+  detail: string;
   onReplay: () => void;
   onExit: () => void;
 }) {
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.25 }}>
-      <Card className="flex flex-col items-center gap-5 p-6 text-center sm:p-8">
-        <motion.span
-          initial={{ rotate: -12, scale: 0.7 }}
-          animate={{ rotate: 0, scale: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 16 }}
-          className="flex size-14 items-center justify-center rounded-full bg-highyield-soft text-highyield"
-        >
-          <Trophy className="size-7" aria-hidden />
-        </motion.span>
-        <div>
-          <p className="text-sm text-muted">{caption}</p>
-          <p className="text-5xl font-semibold tabular-nums">
-            {score}
-            {outOf !== undefined && <span className="text-2xl text-muted">/{outOf}</span>}
-          </p>
-          <p className="text-sm text-muted">bonne{score > 1 ? "s" : ""} réponse{score > 1 ? "s" : ""}</p>
-        </div>
-        <div className="grid w-full grid-cols-2 gap-3 text-left sm:grid-cols-4">
-          {stats.map((stat) => (
-            <Stat key={stat.label} {...stat} />
-          ))}
-        </div>
-        <div className="flex flex-col-reverse gap-2 sm:flex-row">
-          <Button variant="outline" size="lg" onClick={onExit}>
-            Retour aux jeux
-          </Button>
-          <Button size="lg" onClick={onReplay}>
-            <RotateCcw aria-hidden />
-            Rejouer
-          </Button>
-        </div>
-      </Card>
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex flex-col gap-8"
+      role="status"
+    >
+      <div className="flex flex-col gap-3">
+        <h3 className="text-2xl">Partie terminée</h3>
+        <p className="text-lg leading-relaxed">{sentence}</p>
+        <p className="text-base text-muted">{detail}</p>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row-reverse sm:items-center sm:justify-between">
+        <Button size="lg" onClick={onReplay} className="w-full sm:w-auto sm:min-w-40">
+          Rejouer
+        </Button>
+        <TextAction onClick={onExit}>Retour aux mini-jeux</TextAction>
+      </div>
     </motion.div>
   );
 }

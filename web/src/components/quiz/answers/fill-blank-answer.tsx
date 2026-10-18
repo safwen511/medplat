@@ -36,7 +36,7 @@ export function FillBlankAnswer({
 }) {
   const parts = useMemo(() => segments(exercise.text), [exercise.text]);
   return (
-    <p className="rounded-card border border-border bg-surface p-4 text-[1.0625rem] leading-[2.3]">
+    <p className="text-[1.125rem] leading-[3.25rem]">
       {parts.map((part, i) => {
         if (part.kind === "text") return <Fragment key={i}>{part.value}</Fragment>;
         const value = response.blanks[part.id] ?? "";
@@ -56,15 +56,15 @@ export function FillBlankAnswer({
               }
               size={Math.max(8, value.length + 1)}
               className={cn(
-                "h-9 rounded-md border-b-2 bg-surface-muted px-2 text-base leading-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                !submitted && "border-primary/50 focus:border-primary",
-                submitted && ok && "border-correct bg-correct-soft",
-                submitted && !ok && "border-wrong bg-wrong-soft",
+                "h-12 rounded-card border bg-surface px-3 text-[1.0625rem] leading-none transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                !submitted && "border-border focus:border-primary",
+                submitted && ok && "border-correct/60 bg-correct-soft",
+                submitted && !ok && "border-wrong/60 bg-wrong-soft",
               )}
             />
             {submitted && <Mark state={ok ? "correct" : "wrong"} />}
             {submitted && !ok && (
-              <span className="rounded-md bg-correct-soft px-2 py-0.5 text-sm leading-normal text-foreground">
+              <span className="text-base leading-normal text-correct">
                 <span className="sr-only">Réponse attendue : </span>
                 {exercise.blanks[part.id]?.[0] ?? ""}
               </span>
