@@ -245,6 +245,35 @@ def test_pdf_normalization_keeps_raw_text_of_unenriched_formulas(tmp_path: Path)
     assert formula.text == "(taille père + taille mère + 13) 2"
 
 
+def test_pdf_normalization_recovers_text_dropped_by_layout(tmp_path: Path) -> None:
+    source = tmp_path / "boxed.pdf"
+    pdf = fitz.open()
+    page = pdf.new_page(width=300, height=400)
+    page.insert_text((30, 50), "Lesson title")
+    page.insert_text((30, 200), "Plan boxed inside a picture region")
+    page.insert_text((30, 380), "12")
+    pdf.save(source)
+    pdf.close()
+    document = DoclingDocument(name="dropped-box")
+    document.add_page(page_no=1, size=Size(width=300, height=400))
+    document.add_title("Lesson title", prov=provenance(1, 30))
+
+    normalized = normalize_docling_document(
+        document,
+        source_path=source,
+        source_relative_path="nested/boxed.pdf",
+        sha256=sha256_file(source),
+        mime_type="application/pdf",
+        document_type=DocumentType.PDF,
+        parser_name="docling-test",
+        parser_version="1",
+    )
+
+    texts = [block.text for block in normalized.pages[0].blocks]
+    assert texts == ["Lesson title", "Plan boxed inside a picture region"]
+    assert any("layout model dropped" in warning for warning in normalized.processing.warnings)
+
+
 def test_pdf_normalization_marks_low_text_image_pages_as_requiring_ocr(
     tmp_path: Path,
 ) -> None:

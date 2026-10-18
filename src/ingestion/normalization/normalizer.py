@@ -9,6 +9,7 @@ from typing import Any
 
 import fitz  # type: ignore[import-untyped]
 
+from ingestion.normalization.coverage import compact, missing_share
 from ingestion.normalization.models import (
     AssetType,
     BlockType,
@@ -155,6 +156,39 @@ def _normalized_text(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip().casefold()
 
 
+# A PyMuPDF text line is recovered when at least this share of it is absent from the page's
+# Docling text (the layout model dropped it, e.g. text it classified as part of a picture).
+# Lines too short to compare reliably (page numbers, labels) are never recovered.
+_RECOVERY_MIN_MISSING_SHARE = 0.5
+
+
+def _fallback_block(
+    source_relative_path: str,
+    page_number: int,
+    block_id: str,
+    text: str,
+    bounding_box: BoundingBox,
+    reading_order: int,
+) -> NormalizedBlock:
+    return NormalizedBlock(
+        block_id=block_id,
+        block_type=BlockType.UNKNOWN,
+        text=text,
+        page_or_slide_number=page_number,
+        reading_order=reading_order,
+        bounding_box=bounding_box,
+        source_reference=SourceReference(
+            source_relative_path=source_relative_path,
+            location_type=LocationType.PAGE,
+            page_or_slide_number=page_number,
+            block_id=block_id,
+            bounding_box=bounding_box,
+            source_excerpt=text,
+        ),
+        metadata={"pymupdf_text_fallback": True},
+    )
+
+
 def _pdf_text_candidates(page: Any) -> list[tuple[str, str, BoundingBox]]:
     candidates: list[tuple[str, str, BoundingBox]] = []
     for raw in page.get_text("blocks", sort=True):
@@ -177,13 +211,37 @@ def _pdf_text_candidates(page: Any) -> list[tuple[str, str, BoundingBox]]:
     return candidates
 
 
+def _pdf_line_candidates(page: Any) -> list[tuple[int, str, BoundingBox]]:
+    """(PyMuPDF block number, line text, line box) in PyMuPDF reading order."""
+    lines: dict[tuple[int, int], list[Any]] = {}
+    for word in page.get_text("words", sort=True):
+        lines.setdefault((int(word[5]), int(word[6])), []).append(word)
+    candidates = []
+    for (block_number, _line_number), line_words in lines.items():
+        candidates.append(
+            (
+                block_number,
+                " ".join(str(word[4]) for word in line_words),
+                BoundingBox(
+                    left=float(min(word[0] for word in line_words)),
+                    top=float(min(word[1] for word in line_words)),
+                    right=float(max(word[2] for word in line_words)),
+                    bottom=float(max(word[3] for word in line_words)),
+                    coordinate_origin="TOPLEFT",
+                ),
+            )
+        )
+    return candidates
+
+
 def _reconcile_pdf_text(
     source_path: Path,
     source_relative_path: str,
     pages: list[NormalizedPage],
+    tables: list[NormalizedTable],
     warnings: list[str],
 ) -> tuple[list[NormalizedAsset], dict[str, Any]]:
-    """Match canonical text to PyMuPDF blocks; never add duplicate text."""
+    """Match canonical text to PyMuPDF blocks and recover dropped text; never add duplicates."""
     assets: list[NormalizedAsset] = []
     low_text_image_pages: list[int] = []
     total_extractable_characters = 0
@@ -207,25 +265,14 @@ def _reconcile_pdf_text(
                     candidates, start=1
                 ):
                     next_reading_order += 1
-                    block_id = f"block-pymupdf-{page_number:04d}-{index:04d}"
-                    reference = SourceReference(
-                        source_relative_path=source_relative_path,
-                        location_type=LocationType.PAGE,
-                        page_or_slide_number=page_number,
-                        block_id=block_id,
-                        bounding_box=candidate_bbox,
-                        source_excerpt=source_text,
-                    )
                     page.blocks.append(
-                        NormalizedBlock(
-                            block_id=block_id,
-                            block_type=BlockType.UNKNOWN,
-                            text=source_text,
-                            page_or_slide_number=page_number,
-                            reading_order=next_reading_order,
-                            bounding_box=candidate_bbox,
-                            source_reference=reference,
-                            metadata={"pymupdf_text_fallback": True},
+                        _fallback_block(
+                            source_relative_path,
+                            page_number,
+                            f"block-pymupdf-{page_number:04d}-{index:04d}",
+                            source_text,
+                            candidate_bbox,
+                            next_reading_order,
                         )
                     )
                 warnings.append(
@@ -265,6 +312,57 @@ def _reconcile_pdf_text(
                         f"No reliable PyMuPDF coordinate match for {block.block_id} on page "
                         f"{page_number}."
                     )
+
+            covered = [compact(block.text) for block in page.blocks if block.text]
+            covered += [
+                compact(cell.text)
+                for table in tables
+                if table.page_or_slide_number == page_number
+                for cell in table.cells
+                if cell.text
+            ]
+            covered_text = "\n".join(covered)
+            # Recover line by line, keeping consecutive lost lines of one PyMuPDF block together.
+            groups: list[tuple[int, list[str], BoundingBox]] = []
+            for pdf_block, line_text, line_bbox in _pdf_line_candidates(pdf_page):
+                share = missing_share(line_text, covered_text)
+                if share is None or share < _RECOVERY_MIN_MISSING_SHARE:
+                    continue
+                covered_text += "\n" + compact(line_text)
+                if groups and groups[-1][0] == pdf_block:
+                    previous = groups[-1][2]
+                    groups[-1][1].append(line_text)
+                    groups[-1] = (
+                        pdf_block,
+                        groups[-1][1],
+                        BoundingBox(
+                            left=min(previous.left, line_bbox.left),
+                            top=min(previous.top, line_bbox.top),
+                            right=max(previous.right, line_bbox.right),
+                            bottom=max(previous.bottom, line_bbox.bottom),
+                            coordinate_origin="TOPLEFT",
+                        ),
+                    )
+                else:
+                    groups.append((pdf_block, [line_text], line_bbox))
+            for recovered, (_pdf_block, lines, group_bbox) in enumerate(groups, start=1):
+                next_reading_order += 1
+                page.blocks.append(
+                    _fallback_block(
+                        source_relative_path,
+                        page_number,
+                        f"block-pymupdf-recovered-{page_number:04d}-{recovered:04d}",
+                        "\n".join(lines),
+                        group_bbox,
+                        next_reading_order,
+                    )
+                )
+            recovered = len(groups)
+            if recovered:
+                warnings.append(
+                    f"Recovered {recovered} PyMuPDF source text block(s) on page {page_number} "
+                    "that the layout model dropped."
+                )
 
             seen_xrefs: set[int] = set()
             for image in page_images:
@@ -508,7 +606,7 @@ def normalize_docling_document(
 
     if document_type is DocumentType.PDF:
         pdf_assets, extraction_quality = _reconcile_pdf_text(
-            source_path, source_relative_path, pages, warnings
+            source_path, source_relative_path, pages, tables, warnings
         )
         offset = len(assets)
         for index, asset in enumerate(pdf_assets, start=1):
