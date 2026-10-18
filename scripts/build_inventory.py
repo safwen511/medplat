@@ -173,26 +173,31 @@ def text_quality(text: str, vocabulary: set[str]) -> tuple[float | None, str]:
 def main(year: Year) -> int:
     export_root = year.text
     text_root = str(year.text.relative_to(PROJECT_ROOT))
-    # Text exported from validated LibreOffice .pptx derivatives of legacy .ppt/.ppsx sources.
-    office_text_root = str(year.text_office.relative_to(PROJECT_ROOT))
     output_root = year.catalog
     manifest = json.loads((export_root / "export-manifest.json").read_text(encoding="utf-8"))
-    derived_manifest = year.text_office / "derived-export-manifest.json"
-    derived = {}
-    if derived_manifest.is_file():
-        for item in json.loads(derived_manifest.read_text(encoding="utf-8"))["entries"]:
-            if item.get("output_relative_path"):
-                derived[item["source_relative_path"]] = item
-    for entry in manifest["entries"]:
-        item = derived.get(entry["source_relative_path"])
-        if item and item["source_sha256"] == entry["source_sha256"]:
-            entry.update(
-                export_status="exported_from_derivative",
-                output_relative_path=item["output_relative_path"],
-                text_character_count=item["text_character_count"],
-                page_or_slide_count=item["page_or_slide_count"],
-                text_root=office_text_root,
-            )
+    # Derived exports replace the direct export: Office derivatives, then Claude vision
+    # transcriptions of scanned or image-only sources.
+    derived_sources = [
+        (year.text_office / "derived-export-manifest.json", "exported_from_derivative"),
+        (year.text_vision / "vision-export-manifest.json", "exported_from_vision"),
+    ]
+    for derived_manifest, status in derived_sources:
+        derived = {}
+        if derived_manifest.is_file():
+            for item in json.loads(derived_manifest.read_text(encoding="utf-8"))["entries"]:
+                if item.get("output_relative_path"):
+                    derived[item["source_relative_path"]] = item
+        root = str(derived_manifest.parent.relative_to(PROJECT_ROOT))
+        for entry in manifest["entries"]:
+            item = derived.get(entry["source_relative_path"])
+            if item and item["source_sha256"] == entry["source_sha256"]:
+                entry.update(
+                    export_status=status,
+                    output_relative_path=item["output_relative_path"],
+                    text_character_count=item["text_character_count"],
+                    page_or_slide_count=item["page_or_slide_count"],
+                    text_root=root,
+                )
     texts: dict[str, str] = {}
     for entry in manifest["entries"]:
         root = PROJECT_ROOT / entry["text_root"] if entry.get("text_root") else export_root
@@ -253,6 +258,7 @@ def main(year: Year) -> int:
                 "exported",
                 "exported_with_warnings",
                 "exported_from_derivative",
+                "exported_from_vision",
             }:
                 flags.append(record["export_status"])
             if record["exact_duplicate_of"]:

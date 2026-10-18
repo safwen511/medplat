@@ -7,9 +7,11 @@ docling = "data/models/docling"
 [years.dcem1]
 label = "DCEM1 — 3e année"
 faculty = "Faculté de Médecine de Sfax"
+faculty_slug = "sfax"
 source = "library/dcem1"
 
 [years.dcem2]
 label = "DCEM2 — 4e année"
 faculty = "Faculté de Médecine de Sfax"
+faculty_slug = "sfax"
 source = "library/dcem2"

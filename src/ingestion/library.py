@@ -17,6 +17,8 @@ class Year:
     id: str
     label: str
     source: Path
+    faculty: str = ""
+    faculty_slug: str = ""
 
     @property
     def data(self) -> Path:
@@ -43,6 +45,16 @@ class Year:
         return self.data / "ocr"
 
     @property
+    def text_vision(self) -> Path:
+        """Text exports transcribed by Claude vision from scanned or image-only sources."""
+        return self.data / "text-vision"
+
+    @property
+    def runs(self) -> Path:
+        """Claude API batch runs: requests, batch ids, append-only raw results."""
+        return self.data / "runs"
+
+    @property
     def reports(self) -> Path:
         return self.data / "reports"
 
@@ -65,7 +77,13 @@ def load_years(path: Path = LIBRARY_CONFIG) -> dict[str, Year]:
     if not isinstance(years, dict):
         raise ValueError(f"{path}: [years] must be a table.")
     return {
-        year_id: Year(id=year_id, label=entry["label"], source=PROJECT_ROOT / entry["source"])
+        year_id: Year(
+            id=year_id,
+            label=entry["label"],
+            source=PROJECT_ROOT / entry["source"],
+            faculty=entry.get("faculty", ""),
+            faculty_slug=entry.get("faculty_slug", ""),
+        )
         for year_id, entry in years.items()
     }
 

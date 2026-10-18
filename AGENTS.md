@@ -14,7 +14,8 @@ reviewer accepts it.
   `catalog/`, `lessons/`. `data/models/docling/` holds local Docling artifacts.
 - `src/ingestion/`: extraction library and the `medparse` CLI.
 - `scripts/`: catalog and lesson stages (`build_inventory`, `merge_catalog`,
-  `convert_office`, `validate_lesson`), each taking `--year`.
+  `convert_office`, `validate_lesson`, ...), each taking `--year`.
+- `web/`: the student website (Next.js); `supabase/migrations/`: its database schema as SQL.
 - `docs/`: stage specifications. Tests in `tests/`.
 
 `library/` and `data/` are Git-ignored and must never be committed. The former local-Ollama
@@ -36,12 +37,22 @@ pipeline is archived under the Git tag `archive/local-pipeline`; do not restore 
    reason. Folder names guide classification; they are never medical evidence. See
    `docs/catalog-classification.md`.
 3. **Reconstruct** (`data/<year>/lessons/<lesson_id>/lesson.md` + `lesson.json`): rebuild a lesson
-   from its catalogued sources only.
+   from its catalogued faculty sources only, in the faculty's course structure (definition and
+   epidemiology, etiology, physiopathology, diagnosis, treatment). Content rarely tested in past
+   exams is folded, never deleted; sections tested by the catalogued assessments are marked
+   high-yield. Reference books are not reconstruction sources unless the owner decides otherwise;
+   they serve the chatbot. Figures from cited source pages may illustrate a lesson unit.
 4. **Generate** exercises from validated lessons. Authorized types: QCM (single answer), QRM
    (multiple answers), vrai/faux, fill-in-the-blank, matching, ordering, categorizing, numeric,
-   short answer, and image-based items.
-5. **Website**: static prototype (pre-generated lessons and exercises, progress in the browser)
-   plus one server-side chatbot route grounded in the current lesson.
+   short answer, and image-based items. Default budget about 10 items per lesson, weighted toward
+   high-yield sections. Each item carries a 3-step hint ladder (what is asked, what to eliminate,
+   the rule) and a cited explanation.
+5. **Website** (`web/`): Next.js on Vercel. Lessons and exercises are pre-generated static
+   content; user data (profile, attempts with timing, lesson progress, highlights, error reports)
+   lives in Supabase Postgres behind row-level security, with Google sign-in through Supabase
+   Auth. Faculty is part of every route and record (`/<faculty>/<year>/...`) so further faculties
+   can be added. One server-side chatbot route grounded in the current lesson. Mini-games reuse
+   the exercise pool.
 
 ## Source-grounding rules (reconstruction, generation, chatbot)
 
@@ -75,9 +86,11 @@ vision transcription of scanned or image-only pages, and the website chatbot.
 
 ## Not implemented
 
-Do not add without the owner's explicit request: authentication, a database or application
-backend beyond the chatbot route, embeddings or vector search, flashcards, clinical case
-generation, or automated medical review/publication.
+Do not add without the owner's explicit request: application backend logic beyond Supabase (with
+its row-level security) and the chatbot route, payments, leaderboards or other cross-user data,
+embeddings or vector search, flashcards, clinical case generation, AI-generated medical images,
+or automated medical review/publication. Supabase keys: only the public URL and anon key reach the
+browser; the service-role key never enters the repo, logs, or client code.
 
 ## Library and artifact safety
 

@@ -13,6 +13,7 @@ dependencies = [
     "pydantic",
     "typer",
     "rich",
+    "anthropic>=1.15",
 ]
 
 [project.optional-dependencies]
