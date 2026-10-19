@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   // Course content is read from disk (src/lib/content/load.ts) and is not in Git: bundle it with
   // every server function of a prebuilt deploy.
-  outputFileTracingIncludes: { "/**": ["./content/**/*"] },
+  outputFileTracingIncludes: { "/**": ["./content/**/*", "./fixtures/**/*"] },
   partialPrefetching: true,
   turbopack: {
     rules: {

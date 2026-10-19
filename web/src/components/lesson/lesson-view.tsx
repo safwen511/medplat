@@ -17,6 +17,7 @@ import { ReportErrorButton, StatusTracker } from "./lesson-actions";
 import { LessonProvider } from "./lesson-context";
 import { InlineMarkdown, LessonMarkdown, sectionFigures } from "./lesson-markdown";
 import { parseLesson, plainTitle, type LessonSection } from "./parse";
+import { GlossaryLens } from "./glossary-lens";
 import { LessonGuard } from "./lesson-guard";
 import { MarkedBody } from "./marks/marked-body";
 import { LessonToolbar } from "./marks/toolbar";
@@ -221,7 +222,8 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
           </aside>
           <PlanButton items={toc} />
         </ReaderSurface>
-        <LessonToolbar lessonId={lesson.id} hasGlossary={false} />
+        <LessonToolbar lessonId={lesson.id} hasGlossary={(lesson.glossary?.length ?? 0) > 0} />
+      {lesson.glossary?.length ? <GlossaryLens entries={lesson.glossary} /> : null}
         <ReaderSettingsButton />
       </ToolsProvider>
     </LessonProvider>

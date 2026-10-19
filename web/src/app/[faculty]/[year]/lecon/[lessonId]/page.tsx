@@ -3,7 +3,7 @@ import { Suspense } from "react";
 
 import { LessonView } from "@/components/lesson/lesson-view";
 import { QuestionPlayer } from "@/components/quiz/question-player";
-import { availableLessonIds, availableYears, exercises, lesson } from "@/lib/content/load";
+import { availableLessonIds, availableYears, exercises, glossary, lesson } from "@/lib/content/load";
 
 export function generateStaticParams() {
   return availableYears().flatMap(({ faculty, year }) =>
@@ -27,7 +27,7 @@ async function LessonPageContent(props: PageProps<"/[faculty]/[year]/lecon/[less
     .slice(0, 5);
   return (
     <div className="flex flex-col gap-20">
-      <LessonView lesson={content} faculty={faculty} year={year} />
+      <LessonView lesson={{ ...content, glossary: glossary(faculty, year, lessonId) }} faculty={faculty} year={year} />
       {items.length > 0 && (
         <section aria-labelledby="teste-toi" className="mx-auto w-full max-w-[40rem] border-t border-border pt-10">
           <h2 id="teste-toi" className="mb-8 text-[1.625rem] sm:text-[1.75rem]">

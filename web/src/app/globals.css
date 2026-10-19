@@ -132,6 +132,7 @@
   --font-sans: var(--font-body);
   --font-serif: var(--font-display);
   --font-heading: var(--font-display);
+  --font-ar: var(--font-arabic), "Noto Naskh Arabic", serif;
 }
 
 body {
@@ -388,5 +389,22 @@ body {
     text-align: center;
     font-size: 18pt;
     color: #000;
+  }
+}
+
+/* Arabic lens: glossary terms are plain text until "Loupe" is on. */
+[data-lens="on"] .gloss {
+  cursor: help;
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--primary);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.22em;
+  border-radius: 3px;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+@media (any-hover: hover) {
+  [data-lens="on"] .gloss:hover {
+    background-color: var(--primary-soft);
   }
 }

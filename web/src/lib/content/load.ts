@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { SHOW_FIGURES } from "@/lib/flags";
 
-import type { ExerciseSet, Lesson, SourceRef, YearIndex } from "./types";
+import type { ExerciseSet, GlossaryEntry, Lesson, SourceRef, YearIndex } from "./types";
 
 const ROOT = path.join(process.cwd(), "content");
 
@@ -55,6 +55,14 @@ export function exercises(faculty: string, year: string, lessonId: string): Exer
   const data = readJson<ExerciseSet>(faculty, year, "exercises", `${lessonId}.json`);
   if (!data || SHOW_FIGURES) return data;
   return { ...data, items: data.items.filter((item) => item.type !== "image") };
+}
+
+/** The lesson's glossary (Arabic lens): exported by the pipeline, else a committed fixture. */
+export function glossary(faculty: string, year: string, lessonId: string): GlossaryEntry[] {
+  const exported = readJson<GlossaryEntry[]>(faculty, year, "glossary", `${lessonId}.json`);
+  if (exported) return exported;
+  const fixture = path.join(process.cwd(), "fixtures", "glossary", `${lessonId}.json`);
+  return existsSync(fixture) ? (JSON.parse(readFileSync(fixture, "utf-8")) as GlossaryEntry[]) : [];
 }
 
 export function availableLessonIds(faculty: string, year: string): string[] {

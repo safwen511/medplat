@@ -61,6 +61,7 @@ export interface Lesson {
   sources: SourceRef[];
   figures: Figure[];
   validationErrors?: string[]; // comparison drafts only; published lessons have none
+  glossary?: GlossaryEntry[]; // Arabic lens terms (added by the lesson page)
 }
 
 // Exercises ---------------------------------------------------------------------------------
@@ -153,4 +154,12 @@ export interface ExerciseSet {
   lessonId: string;
   status: ReviewStatus;
   items: Exercise[];
+}
+
+// Glossary (Arabic lens, docs/glossary.md) ---------------------------------------------------------
+
+export interface GlossaryEntry {
+  term: string;
+  fr_definition: string;
+  ar: string;
 }

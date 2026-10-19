@@ -1,0 +1,16 @@
+[
+  { "term": "insuffisance cardiaque", "fr_definition": "Incapacité du cœur à assurer un débit sanguin suffisant pour les besoins de l'organisme.", "ar": "قصور القلب" },
+  { "term": "débit cardiaque", "fr_definition": "Volume de sang éjecté par le cœur en une minute.", "ar": "النتاج القلبي" },
+  { "term": "dyspnée", "fr_definition": "Gêne respiratoire ressentie par le patient.", "ar": "ضيق التنفس" },
+  { "term": "orthopnée", "fr_definition": "Gêne respiratoire en position allongée, soulagée en position assise.", "ar": "ضيق التنفس الاضطجاعي" },
+  { "term": "œdème", "fr_definition": "Accumulation anormale de liquide dans les tissus.", "ar": "وذمة" },
+  { "term": "échocardiographie", "fr_definition": "Examen par ultrasons qui montre le cœur et ses valves en mouvement.", "ar": "تخطيط صدى القلب" },
+  { "term": "tachycardie", "fr_definition": "Rythme cardiaque trop rapide au repos (plus de 100 battements par minute).", "ar": "تسرّع القلب" },
+  { "term": "cardiomyopathie", "fr_definition": "Maladie du muscle cardiaque.", "ar": "اعتلال عضلة القلب" },
+  { "term": "précharge", "fr_definition": "Remplissage du ventricule juste avant sa contraction.", "ar": "الحمل القبلي" },
+  { "term": "turgescence jugulaire", "fr_definition": "Veines jugulaires du cou gonflées : signe de congestion du cœur droit.", "ar": "انتفاخ الوريد الوداجي" },
+  { "term": "hépatomégalie", "fr_definition": "Augmentation du volume du foie.", "ar": "تضخّم الكبد" },
+  { "term": "râles crépitants", "fr_definition": "Bruits fins entendus à l'auscultation des poumons, comme des cheveux froissés près de l'oreille.", "ar": "خراخر فرقعية" },
+  { "term": "diurétiques", "fr_definition": "Médicaments qui augmentent l'élimination d'eau et de sel par les reins.", "ar": "مدرّات البول" },
+  { "term": "contractilité", "fr_definition": "Capacité du muscle cardiaque à se contracter.", "ar": "قابلية الانقباض" }
+]

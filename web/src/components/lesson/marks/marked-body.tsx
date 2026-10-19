@@ -79,7 +79,7 @@ export function MarkedBody({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const { tool, style, color } = useTools();
+  const { tool, style, color, lens } = useTools();
   const { colors } = useReaderSettings();
   const { highlights: legacy, removeHighlight } = useLesson();
   const marks = useSyncExternalStore(onMarksChange, () => readMarksSnapshot(lessonId), () => EMPTY);
@@ -224,6 +224,7 @@ export function MarkedBody({
       ref={ref}
       data-lesson-body
       data-tool={tool ?? "none"}
+      data-lens={lens ? "on" : "off"}
       onClick={onClick}
       className={className}
       style={{ position: "relative" }}

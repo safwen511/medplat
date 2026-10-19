@@ -1,6 +1,6 @@
 // Server-rendered lesson markdown: GFM tables, quiet blocks and inline citations.
 
-import Markdown, { type Components } from "react-markdown";
+import Markdown, { type Components, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { Lesson } from "@/lib/content/types";
@@ -15,9 +15,15 @@ import {
   STUDENT_ROLES,
 } from "./citations";
 import type { LabeledFigure } from "./figures";
+import { remarkGlossary } from "./glossary";
 import { TableFrame } from "./table-frame";
 
-const remarkPlugins = [remarkGfm, remarkCitations];
+type Plugins = NonNullable<Options["remarkPlugins"]>;
+
+/** Markdown plugins for a lesson: tables, source chips, then the glossary terms (Arabic lens). */
+function remarkPlugins(lesson: Lesson): Plugins {
+  return [remarkGfm, remarkCitations, [remarkGlossary, { terms: (lesson.glossary ?? []).map((entry) => entry.term) }]];
+}
 
 /** Chip data for a citation's inner text, resolved against the lesson's sources and figures. */
 export function resolveCitation(
@@ -105,7 +111,7 @@ function components(lesson: Lesson): Components {
 export function LessonMarkdown({ markdown, lesson }: { markdown: string; lesson: Lesson }) {
   if (!markdown.trim()) return null;
   return (
-    <Markdown remarkPlugins={remarkPlugins} components={components(lesson)}>
+    <Markdown remarkPlugins={remarkPlugins(lesson)} components={components(lesson)}>
       {markdown}
     </Markdown>
   );
@@ -115,7 +121,7 @@ export function LessonMarkdown({ markdown, lesson }: { markdown: string; lesson:
 export function InlineMarkdown({ markdown, lesson }: { markdown: string; lesson: Lesson }) {
   return (
     <Markdown
-      remarkPlugins={remarkPlugins}
+      remarkPlugins={remarkPlugins(lesson)}
       components={{ ...components(lesson), p: ({ children }) => <>{children}</> }}
     >
       {markdown}
