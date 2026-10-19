@@ -149,7 +149,7 @@ export function FontSwitcher({ pairings }: { pairings: Pairing[] }) {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <header className="flex flex-col gap-4">
-        <h1 className="text-2xl">Styleguide · étape 1 : typographie</h1>
+        <h1 className="text-2xl">Typographie : comparaison</h1>
         <p className="max-w-2xl text-muted">
           Trois associations titre + texte, chacune avec des titres, un paragraphe accentué, des tuiles de
           statistiques, un dossier de certif et une question de quiz. Choisis-en une.

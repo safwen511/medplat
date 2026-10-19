@@ -1,77 +1,78 @@
 @import "tailwindcss";
 
-/* MedPlat tokens — see docs/design.md. Calm and quiet: warm off-white page, near-black text,
-   ONE accent (primary action and current selection only), muted green/red for answer feedback
-   only. No gradients, no glow. One radius everywhere. */
-:root {
-  color-scheme: light;
-  --background: #faf8f4;
-  --surface: #fffefb;
-  --surface-muted: #f2efe9;
-  --foreground: #23211e;
-  --muted: #6e6960;
-  --border: #e6e1d8;
-  --primary: #22625d;
-  --primary-hover: #1b4f4b;
-  --primary-soft: #e6efed;
-  --primary-foreground: #fffefb;
-  --correct: #3f7a57;
-  --correct-soft: #e7f0e9;
-  --wrong: #a5483f;
-  --wrong-soft: #f5e6e3;
-  /* High-yield is a quiet text marker, not a colour of its own. */
-  --highyield: #6e6960;
-  --highyield-soft: #f2efe9;
-  --ring: #22625d;
-  --radius: 12px;
-}
+/* MedPlat tokens — see docs/design.md ("futuristic study console"). Dark is the primary theme.
+   Surfaces, 3 levels: page (--background) → section panels (--panel) → cards (--surface).
+   One accent (--primary), amber for high-yield, muted green/red for answers only.
+   Glow marks focus/hover/selection; motion is transform/opacity only, 150–300ms. */
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    color-scheme: dark;
-    --background: #1f1d1b;
-    --surface: #282623;
-    --surface-muted: #2f2c29;
-    --foreground: #ece8e1;
-    --muted: #a59f95;
-    --border: #3a3732;
-    --primary: #7cb8b0;
-    --primary-hover: #95c8c1;
-    --primary-soft: #2b3a38;
-    --primary-foreground: #1a1918;
-    --correct: #86bf98;
-    --correct-soft: #283a2e;
-    --wrong: #e0928a;
-    --wrong-soft: #402a27;
-    --highyield: #a59f95;
-    --highyield-soft: #2f2c29;
-    --ring: #7cb8b0;
-  }
-}
-
+:root,
 :root.dark {
   color-scheme: dark;
-  --background: #1f1d1b;
-  --surface: #282623;
-  --surface-muted: #2f2c29;
-  --foreground: #ece8e1;
-  --muted: #a59f95;
-  --border: #3a3732;
-  --primary: #7cb8b0;
-  --primary-hover: #95c8c1;
-  --primary-soft: #2b3a38;
-  --primary-foreground: #1a1918;
-  --correct: #86bf98;
-  --correct-soft: #283a2e;
-  --wrong: #e0928a;
-  --wrong-soft: #402a27;
-  --highyield: #a59f95;
-  --highyield-soft: #2f2c29;
-  --ring: #7cb8b0;
+  --background: #070b16;
+  --panel: #0d1424;
+  --panel-border: #1b2640;
+  --surface: #131c31;
+  --surface-muted: #19233b;
+  --foreground: #e6ecf7;
+  --muted: #8b98b2;
+  --border: #22304d;
+  --primary: #4cc3d4;
+  --primary-hover: #73d4e1;
+  --primary-soft: #11303a;
+  --primary-foreground: #04131a;
+  --correct: #4fc48d;
+  --correct-soft: #10291f;
+  --wrong: #ef7d7a;
+  --wrong-soft: #321a1d;
+  --highyield: #f0b54d;
+  --highyield-soft: #2e2410;
+  --ring: #4cc3d4;
+  --glow: 0 0 0 1px rgb(76 195 212 / 0.4), 0 0 22px rgb(76 195 212 / 0.2);
+  --glow-strong: 0 0 0 1px rgb(76 195 212 / 0.55), 0 0 36px rgb(76 195 212 / 0.32);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-2: 0 10px 28px rgb(0 0 0 / 0.45);
+  --shadow-3: 0 22px 56px rgb(0 0 0 / 0.55);
+  --radius: 16px;
+  --radius-panel: 20px;
+  --radius-control: 12px;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:root.light {
+  color-scheme: light;
+  --background: #edf1f7;
+  --panel: #ffffff;
+  --panel-border: #d9e0ec;
+  --surface: #f5f7fb;
+  --surface-muted: #ebeff6;
+  --foreground: #111a2b;
+  --muted: #5a6680;
+  --border: #d4dcea;
+  --primary: #0e7f90;
+  --primary-hover: #0b6a78;
+  --primary-soft: #dff2f5;
+  --primary-foreground: #ffffff;
+  --correct: #1f8a5a;
+  --correct-soft: #e2f4ea;
+  --wrong: #c2413f;
+  --wrong-soft: #fbe8e7;
+  --highyield: #b16f12;
+  --highyield-soft: #fcf0dc;
+  --ring: #0e7f90;
+  --glow: 0 0 0 1px rgb(14 127 144 / 0.35), 0 0 18px rgb(14 127 144 / 0.14);
+  --glow-strong: 0 0 0 1px rgb(14 127 144 / 0.5), 0 0 28px rgb(14 127 144 / 0.22);
+  --shadow-1: 0 1px 2px rgb(17 26 43 / 0.08);
+  --shadow-2: 0 10px 28px rgb(17 26 43 / 0.1);
+  --shadow-3: 0 22px 56px rgb(17 26 43 / 0.16);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-panel: var(--panel);
+  --color-panel-border: var(--panel-border);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
@@ -89,14 +90,22 @@
   --color-highyield-soft: var(--highyield-soft);
   --color-ring: var(--ring);
   --radius-card: var(--radius);
-  --font-sans: var(--font-public-sans);
-  --font-serif: var(--font-source-serif);
+  --radius-panel: var(--radius-panel);
+  --radius-control: var(--radius-control);
+  --shadow-depth-1: var(--shadow-1);
+  --shadow-depth-2: var(--shadow-2);
+  --shadow-depth-3: var(--shadow-3);
+  --shadow-glow: var(--glow);
+  --shadow-glow-strong: var(--glow-strong);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --font-heading: var(--font-display);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-public-sans), sans-serif;
+  font-family: var(--font-body), sans-serif;
   font-size: 17px;
   line-height: 1.6;
 }
@@ -105,13 +114,34 @@ body {
   h1,
   h2,
   h3 {
-    font-family: var(--font-source-serif), serif;
+    font-family: var(--font-display), sans-serif;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
   }
 }
 
-/* Lesson reading: body sans for legibility on tablets, serif headings. */
+@layer components {
+  /* Level 2: a section panel with its title row. */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-panel);
+    padding: 1.5rem;
+  }
+  @media (min-width: 640px) {
+    .panel {
+      padding: 2rem;
+    }
+  }
+  /* Big numerals for stat tiles. */
+  .numeral {
+    font-family: var(--font-display), sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Lesson reading. */
 .lesson-prose {
   font-size: 1.0625rem;
   line-height: 1.75;

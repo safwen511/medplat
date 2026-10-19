@@ -49,13 +49,16 @@ rings (goal, mastery) and progress bars (per certif). Sentences may explain, not
   stat tiles. Body 17–18px on tablets.
 
 ## Content rules (product decisions)
-- MedPlat publishes **exercises only, never course text**. Courses are navigation titles that lead
-  to their exercises; no "Lire" buttons, no "lus / Lus %" statistics.
-- In explanations, raw citation codes ("[S1 p.6]") are removed from the text and replaced by a
-  small line under the explanation: "Voir le cours : <titre>, p. 6".
+- Courses stay readable (lesson pages, "Lire" buttons, reading progress) and each course leads to
+  its exercises.
+- In quiz explanations, raw citation codes ("[S1 p.6]") are removed from the text and replaced by
+  a small line under the explanation: "Voir le cours : <titre>, p. 6" (linking to the course).
 - Keep "Signaler une erreur" on every question and the persistent beta label
   ("Bêta · gratuit · non relu par un médecin").
 - Empty or missing values say what to do: e.g. no exam date → "Ajoute la date de ton certif".
+
+## Typography (chosen)
+Display: **Space Grotesk** (titles, numbers, stat tiles). Body: **IBM Plex Sans**.
 
 ## Access (beta)
 - Testers enter a personal access code (no e-mail login for now). A valid code opens the site and
