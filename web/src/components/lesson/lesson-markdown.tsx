@@ -64,13 +64,13 @@ function components(lesson: Lesson): Components {
     },
     p: (props) => <p className="my-5" {...omitNode(props)} />,
     ul: (props) => (
-      <ul className="my-5 list-disc space-y-2.5 pl-6 marker:text-muted" {...omitNode(props)} />
+      <ul className="my-5 list-disc space-y-2.5 pl-6 marker:text-primary/70" {...omitNode(props)} />
     ),
-    ol: (props) => <ol className="my-5 list-decimal space-y-2.5 pl-6 marker:text-muted" {...omitNode(props)} />,
+    ol: (props) => <ol className="my-5 list-decimal space-y-2.5 pl-6 marker:font-heading marker:text-primary/80" {...omitNode(props)} />,
     li: (props) => <li className="pl-1 [&>p]:my-1" {...omitNode(props)} />,
     blockquote: (props) => (
       <blockquote
-        className="my-6 border-l border-border pl-5 text-muted"
+        className="my-6 rounded-r-card border-l-2 border-primary/40 bg-surface/60 py-3 pr-4 pl-5 text-muted"
         {...omitNode(props)}
       />
     ),
@@ -94,21 +94,21 @@ function components(lesson: Lesson): Components {
     ),
     hr: () => <hr className="my-12 border-border" />,
     table: (props) => (
-      <div className="my-8 overflow-x-auto [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]">
+      <div className="my-8 overflow-x-auto rounded-card border border-border [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]">
         <table
           className="w-full min-w-[32rem] border-collapse text-left text-[0.9375rem] leading-normal"
           {...omitNode(props)}
         />
       </div>
     ),
-    thead: (props) => <thead className="font-sans text-sm text-muted" {...omitNode(props)} />,
+    thead: (props) => <thead className="bg-surface-muted/70 font-sans text-sm text-muted" {...omitNode(props)} />,
     tr: (props) => (
-      <tr className="border-b border-border" {...omitNode(props)} />
+      <tr className="border-b border-border last:border-b-0" {...omitNode(props)} />
     ),
     th: (props) => (
-      <th className="py-2 pr-4 align-bottom font-medium" {...omitNode(props)} />
+      <th className="px-4 py-2.5 align-bottom font-medium" {...omitNode(props)} />
     ),
-    td: (props) => <td className="py-3 pr-4 align-top" {...omitNode(props)} />,
+    td: (props) => <td className="px-4 py-3 align-top" {...omitNode(props)} />,
   };
 }
 

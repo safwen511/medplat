@@ -2,7 +2,11 @@
 // table of contents, highlights and follow-up actions are small client islands. Calm reading:
 // one ~640px column, serif headings, quiet citations, secondary actions as text links.
 
+import { Clock, FileText, ListTree } from "lucide-react";
 import Link from "next/link";
+
+import { CertifEmblem } from "@/components/cards/certif-art";
+import { certifTheme } from "@/components/cards/themes";
 
 import type { Lesson } from "@/lib/content/types";
 
@@ -14,12 +18,19 @@ import { ReportErrorButton, StatusTracker } from "./lesson-actions";
 import { LessonProvider } from "./lesson-context";
 import { InlineMarkdown, LessonMarkdown, sectionFigures } from "./lesson-markdown";
 import { parseLesson, plainTitle, type LessonSection } from "./parse";
+import { ReadingProgress } from "./reading-progress";
 import { headingClass, SectionHeading, sectionSpacing } from "./heading";
 import { MarginToc, TocLink, type TocItem } from "./toc";
 
 const ARTICLE_ID = "lecon";
 
 const linkRow = "flex flex-wrap items-center gap-x-5 font-sans";
+
+/** About 200 words a minute for dense medical French, citations left out. */
+function readingMinutes(markdown: string): number {
+  const words = markdown.replace(CITATION, "").split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
 
 /** "{examen}": a quiet marker in muted ink under the heading. */
 function HighYieldMarker() {
@@ -104,20 +115,37 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
 
   return (
     <LessonProvider lessonId={lesson.id} faculty={faculty} year={year}>
+      <ReadingProgress />
       {/* The column stays centred; on wide screens the table of contents hangs in the right margin. */}
       <div className="relative mx-auto w-full max-w-[40rem]">
         <article id={ARTICLE_ID} className="min-w-0">
           <header className="font-sans">
-            <p className="text-sm text-muted">
-              <Link
-                href={`/${faculty}/${year}/${lesson.certif}`}
-                className="rounded underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
+            <Link
+              href={`/${faculty}/${year}/${lesson.certif}`}
+              className="group inline-flex items-center gap-2.5 rounded-full py-1 pr-3 pl-1 text-sm text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <CertifEmblem theme={certifTheme({ slug: lesson.certif, pole: "" })} className="size-7 rounded-full" />
+              <span>
                 {lesson.certifTitle}
-              </Link>
-              {lesson.module && <> · {lesson.module}</>}
+                {lesson.module && <span className="text-subtle"> · {lesson.module}</span>}
+              </span>
+            </Link>
+            <h1 className="rise-in mt-5 text-[2.125rem] leading-[1.1] sm:text-[2.75rem]">{lesson.title}</h1>
+            <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="size-4" strokeWidth={1.6} aria-hidden />≈ {readingMinutes(lesson.markdown)} min de lecture
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <FileText className="size-4" strokeWidth={1.6} aria-hidden />
+                {sourceCount} source{sourceCount > 1 ? "s" : ""}
+              </span>
+              {toc.length > 0 && (
+                <span className="inline-flex items-center gap-1.5">
+                  <ListTree className="size-4" strokeWidth={1.6} aria-hidden />
+                  {toc.length} parties
+                </span>
+              )}
             </p>
-            <h1 className="mt-3 text-balance text-[2rem] leading-tight sm:text-[2.5rem]">{lesson.title}</h1>
 
             {lesson.status === "draft_unreviewed" && (
               <p role="note" className="mt-4 text-sm leading-relaxed text-muted">

@@ -57,9 +57,10 @@ export function ChoiceAnswer({
               aria-disabled={submitted}
               onClick={() => toggle(option.id)}
               className={cn(
-                "flex min-h-14 w-full items-center gap-4 rounded-card border px-4 py-3 text-left text-[1.0625rem] leading-snug transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                !submitted && isChosen && "border-primary bg-primary-soft",
-                !submitted && !isChosen && "border-border bg-surface hover:border-muted/50",
+                "flex min-h-14 w-full items-center gap-4 rounded-card border px-4 py-3 text-left text-[1.0625rem] leading-snug transition-[color,background-color,border-color,box-shadow,scale] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                !submitted && "active:scale-[0.99]",
+                !submitted && isChosen && "border-primary/70 bg-primary-soft shadow-glow",
+                !submitted && !isChosen && "border-border bg-surface hover:border-border-strong hover:bg-surface-muted/60",
                 submitted && markClasses[state],
               )}
             >

@@ -15,7 +15,7 @@ function ActivityTooltip({ active, payload }: Pick<TooltipContentProps<number, s
   if (!active || !payload?.length) return null;
   const row = payload[0].payload as ActivityRow;
   return (
-    <div className="rounded-card border border-border bg-surface px-3 py-2 text-sm">
+    <div className="rounded-card border border-border-strong bg-panel px-3 py-2 text-sm shadow-depth-2">
       <span className="text-foreground">{row.label}</span>
       <span className="text-muted tabular-nums">
         {" "}
@@ -27,7 +27,7 @@ function ActivityTooltip({ active, payload }: Pick<TooltipContentProps<number, s
 
 export function ActivityChart({ rows }: { rows: ActivityRow[] }) {
   return (
-    <div className="h-40" aria-hidden>
+    <div className="h-48" aria-hidden>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} margin={{ top: 4, right: 16, bottom: 0, left: 16 }} barCategoryGap={2}>
           <XAxis
@@ -38,7 +38,7 @@ export function ActivityChart({ rows }: { rows: ActivityRow[] }) {
             interval={9}
           />
           <Tooltip cursor={{ fill: "var(--surface-muted)" }} content={(props) => <ActivityTooltip active={props.active} payload={props.payload} />} />
-          <Bar dataKey="count" fill="var(--primary)" radius={[2, 2, 0, 0]} maxBarSize={12} isAnimationActive={false} />
+          <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} maxBarSize={14} isAnimationActive={false} />
         </BarChart>
       </ResponsiveContainer>
     </div>

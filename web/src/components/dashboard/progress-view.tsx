@@ -1,11 +1,16 @@
 "use client";
 
+import { ArrowRight, CircleCheck, Flame, Lightbulb, ListChecks, Timer } from "lucide-react";
 import Link from "next/link";
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
+import { PageStack, SectionHeader } from "@/components/ui/panel";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatTile } from "@/components/ui/stat-tile";
 import type { YearIndex } from "@/lib/content/types";
 import type { Attempt } from "@/lib/progress/store";
+import { cn } from "@/lib/utils";
 
 import { ActivityChart, type ActivityRow } from "./charts";
 import {
@@ -23,12 +28,9 @@ import {
   streak,
   useStudentData,
 } from "./data";
-import { Column, LoadingLines } from "./parts";
 
 const WEAK_MIN_ATTEMPTS = 3;
 const dayLabel = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
-
-const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? "s" : ""}`;
 
 export function ProgressView({ index }: { index: YearIndex }) {
   const data = useStudentData(index);
@@ -36,54 +38,80 @@ export function ProgressView({ index }: { index: YearIndex }) {
   const stats = useMemo(() => computeStats(index, attempts, now), [index, attempts, now]);
 
   return (
-    <Column className="gap-12">
+    <PageStack className="max-w-5xl">
       <header className="flex flex-col gap-3">
-        <p className="text-sm text-muted">{index.yearLabel}</p>
-        <h1 className="text-3xl leading-tight sm:text-4xl">Progression</h1>
+        <p className="eyebrow">{index.yearLabel}</p>
+        <h1 className="rise-in text-4xl leading-tight sm:text-5xl">Progression</h1>
       </header>
 
       {data.loading ? (
-        <LoadingLines count={3} />
+        <div aria-busy="true" aria-label="Chargement" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-28 rounded-card" />
+          ))}
+        </div>
       ) : attempts.length === 0 ? (
-        <section className="flex flex-col items-start gap-6">
+        <section className="panel flex flex-col items-start gap-6">
           <p className="text-lg text-muted">Réponds à tes premières questions pour voir ta progression ici.</p>
-          <Button asChild size="lg">
+          <Button asChild size="lg" className="shadow-glow">
             <Link href={quizHref(index)}>Commencer un quiz</Link>
           </Button>
         </section>
       ) : (
         <>
-          <section aria-label="En bref" className="flex flex-col gap-4 text-lg">
-            <p>
-              Tu as répondu à <Strong>{plural(stats.overall.total, "question")}</Strong>, dont{" "}
-              <Strong>{stats.overall.percent} %</Strong> de réponses justes.
-            </p>
-            <p className="text-muted">
-              Temps médian par question : {formatSeconds(stats.medianTime)}
-              {stats.medianCorrect !== null && stats.medianWrong !== null
-                ? ` (${formatSeconds(stats.medianCorrect)} quand c'est juste, ${formatSeconds(stats.medianWrong)} quand c'est faux).`
-                : "."}
-              {stats.streak > 0 && ` Série en cours : ${plural(stats.streak, "jour")}.`}
-            </p>
+          <section aria-label="En bref" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile
+              icon={<ListChecks className="size-4" aria-hidden />}
+              label="questions répondues"
+              value={stats.overall.total.toLocaleString("fr-FR")}
+            />
+            <StatTile
+              icon={<CircleCheck className="size-4" aria-hidden />}
+              label="bonnes réponses"
+              value={`${stats.overall.percent} %`}
+            />
+            <StatTile icon={<Flame className="size-4" aria-hidden />} label="série de jours" value={stats.streak} />
+            <StatTile
+              icon={<Timer className="size-4" aria-hidden />}
+              label="temps médian"
+              value={formatSeconds(stats.medianTime)}
+              hint={
+                stats.medianCorrect !== null && stats.medianWrong !== null
+                  ? `juste ${formatSeconds(stats.medianCorrect)} · faux ${formatSeconds(stats.medianWrong)}`
+                  : undefined
+              }
+            />
             {stats.hinted > 0 && (
-              <p className="text-muted">
-                Indices utilisés sur {stats.hintShare} % des questions ; {stats.withoutHints.percent ?? 0} % de justes
-                sans indice, {stats.withHints.percent ?? 0} % avec.
-              </p>
+              <>
+                <StatTile
+                  icon={<Lightbulb className="size-4" aria-hidden />}
+                  label="questions avec indice"
+                  value={`${stats.hintShare} %`}
+                />
+                <StatTile label="justes sans indice" value={`${stats.withoutHints.percent ?? 0} %`} />
+                <StatTile label="justes avec indice" value={`${stats.withHints.percent ?? 0} %`} />
+              </>
             )}
           </section>
 
-          <section aria-labelledby="activity-title" className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <h2 id="activity-title" className="text-xl">
-                30 derniers jours
-              </h2>
-              <p className="text-muted">
-                {plural(stats.last30Total, "question")} sur {plural(stats.activeDays, "jour")} actif
-                {stats.activeDays > 1 ? "s" : ""}.
-              </p>
+          <section aria-labelledby="activity-title" className="flex flex-col gap-6">
+            <SectionHeader
+              id="activity-title"
+              title="30 derniers jours"
+              action={
+                <span className="flex gap-2 text-sm">
+                  <span className="rounded-full bg-primary-soft px-3 py-1 text-primary">
+                    <span className="numeral font-semibold">{stats.last30Total}</span> questions
+                  </span>
+                  <span className="rounded-full border border-border px-3 py-1 text-muted">
+                    <span className="numeral font-semibold text-foreground">{stats.activeDays}</span> jours actifs
+                  </span>
+                </span>
+              }
+            />
+            <div className="panel">
+              <ActivityChart rows={stats.activity} />
             </div>
-            <ActivityChart rows={stats.activity} />
             <div className="sr-only">
               <table>
                 <caption>Questions par jour, 30 derniers jours</caption>
@@ -107,77 +135,86 @@ export function ProgressView({ index }: { index: YearIndex }) {
             </div>
           </section>
 
-          {stats.byCertif.length > 0 && (
-            <section aria-labelledby="certifs-title" className="flex flex-col gap-2">
-              <h2 id="certifs-title" className="text-xl">
-                Par certif
-              </h2>
-              <ul className="flex flex-col">
-                {stats.byCertif.map((row) => (
-                  <li
-                    key={row.certif.slug}
-                    className="flex min-h-12 items-baseline justify-between gap-4 border-b border-border py-3 last:border-b-0"
-                  >
-                    <Link
-                      href={certifHref(index, row.certif)}
-                      className="min-w-0 truncate underline decoration-border underline-offset-4 hover:decoration-foreground"
-                    >
-                      {shortCertifTitle(row.certif.title)}
-                    </Link>
-                    <span className="shrink-0 text-sm text-muted tabular-nums">
-                      {row.score.percent} % · {plural(row.score.total, "réponse")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <section aria-labelledby="weak-title" className="flex flex-col gap-2">
-            <div className="flex flex-col gap-1">
-              <h2 id="weak-title" className="text-xl">
-                À retravailler
-              </h2>
-              <p className="text-muted">
-                {stats.weakest.length === 0
-                  ? `Pas encore assez de réponses par cours (il en faut au moins ${WEAK_MIN_ATTEMPTS}).`
-                  : `Les cours où tu as le moins de réponses justes, parmi ceux avec au moins ${WEAK_MIN_ATTEMPTS} réponses.`}
-              </p>
-            </div>
-            {stats.weakest.length > 0 && (
-              <ol className="flex flex-col">
-                {stats.weakest.map((row) => (
-                  <li
-                    key={row.lesson.id}
-                    className="flex min-h-14 items-center justify-between gap-4 border-b border-border py-3 last:border-b-0"
-                  >
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate">{row.lesson.title}</span>
-                      <span className="truncate text-sm text-muted tabular-nums">
-                        {shortCertifTitle(row.certif.title)} · {row.score.percent} % ({row.score.correct}/
-                        {row.score.total})
-                      </span>
-                    </div>
-                    <Link
-                      href={row.lesson.available ? lessonHref(index, row.lesson) : certifHref(index, row.certif)}
-                      aria-label={`${row.lesson.available ? "Revoir le cours" : "Voir le certif"} « ${row.lesson.title} »`}
-                      className="inline-flex min-h-12 shrink-0 items-center rounded-card px-1 text-sm text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    >
-                      {row.lesson.available ? "Revoir le cours" : "Voir le certif"}
-                    </Link>
-                  </li>
-                ))}
-              </ol>
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-8 [&>*]:min-w-0">
+            {stats.byCertif.length > 0 && (
+              <section aria-labelledby="certifs-title" className="flex flex-col gap-5">
+                <SectionHeader id="certifs-title" title="Par certif" subtitle="Bonnes réponses et nombre de réponses." />
+                <ul className="flex flex-col gap-1">
+                  {stats.byCertif.map((row) => (
+                    <li key={row.certif.slug}>
+                      <Link
+                        href={certifHref(index, row.certif)}
+                        className="-mx-2 flex flex-col gap-2 rounded-card px-2 py-3 transition-colors duration-150 hover:bg-surface focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      >
+                        <span className="flex items-baseline justify-between gap-4">
+                          <span className="min-w-0 truncate font-medium">{shortCertifTitle(row.certif.title)}</span>
+                          <span className="shrink-0 text-sm text-muted tabular-nums">
+                            <span className="numeral font-semibold text-foreground">{row.score.percent} %</span> ·{" "}
+                            {row.score.total}
+                          </span>
+                        </span>
+                        <span aria-hidden className="h-1.5 overflow-hidden rounded-full bg-surface-muted">
+                          <span
+                            className={cn("block h-full rounded-full", tone(row.score.percent ?? 0, "bar"))}
+                            style={{ width: `${row.score.percent}%` }}
+                          />
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             )}
-          </section>
+
+            <section aria-labelledby="weak-title" className="flex flex-col gap-5">
+              <SectionHeader
+                id="weak-title"
+                title="À retravailler"
+                subtitle={`Les cours avec le moins de bonnes réponses (au moins ${WEAK_MIN_ATTEMPTS} réponses).`}
+              />
+              {stats.weakest.length === 0 ? (
+                <p className="text-muted">Pas encore assez de réponses par cours.</p>
+              ) : (
+                <ol className="flex flex-col gap-2">
+                  {stats.weakest.map((row) => (
+                    <li key={row.lesson.id}>
+                      <Link
+                        href={row.lesson.available ? lessonHref(index, row.lesson) : certifHref(index, row.certif)}
+                        className="flex min-h-14 items-center gap-4 rounded-card border border-border bg-surface px-4 py-3 transition-shadow duration-200 hover:shadow-glow focus-visible:shadow-glow focus-visible:outline-none"
+                      >
+                        <span
+                          className={cn(
+                            "numeral w-16 shrink-0 rounded-control py-1 text-center text-lg font-semibold",
+                            tone(row.score.percent ?? 0, "badge"),
+                          )}
+                        >
+                          {row.score.percent} %
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="line-clamp-2 leading-snug font-medium">{row.lesson.title}</span>
+                          <span className="block truncate text-sm text-muted tabular-nums">
+                            {shortCertifTitle(row.certif.title)} · {row.score.correct}/{row.score.total}
+                          </span>
+                        </span>
+                        <ArrowRight className="size-4 shrink-0 text-muted" aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          </div>
         </>
       )}
-    </Column>
+    </PageStack>
   );
 }
 
-function Strong({ children }: { children: ReactNode }) {
-  return <span className="font-medium tabular-nums">{children}</span>;
+/** Colour for an accuracy: red under 50 %, amber under 75 %, green above. */
+function tone(percent: number, kind: "bar" | "badge") {
+  if (percent < 50) return kind === "bar" ? "bg-wrong" : "bg-wrong-soft text-wrong";
+  if (percent < 75) return kind === "bar" ? "bg-highyield" : "bg-highyield-soft text-highyield";
+  return kind === "bar" ? "bg-correct" : "bg-correct-soft text-correct";
 }
 
 function computeStats(index: YearIndex, attempts: Attempt[], now: Date) {
