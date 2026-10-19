@@ -13,12 +13,15 @@ import type { Lesson } from "@/lib/content/types";
 import { CITATION, STUDENT_ROLES } from "./citations";
 import { FigureGallery } from "./figures";
 import { FoldableSection } from "./foldable-section";
-import { HighlightableBody, HighlightsLink } from "./highlights";
 import { ReportErrorButton, StatusTracker } from "./lesson-actions";
 import { LessonProvider } from "./lesson-context";
 import { InlineMarkdown, LessonMarkdown, sectionFigures } from "./lesson-markdown";
 import { parseLesson, plainTitle, type LessonSection } from "./parse";
 import { LessonGuard } from "./lesson-guard";
+import { MarkedBody } from "./marks/marked-body";
+import { LessonToolbar } from "./marks/toolbar";
+import { ToolsProvider } from "./marks/tools";
+import { ReaderSettingsButton } from "./reader-settings-panel";
 import { ReadingProgress } from "./reading-progress";
 import { headingClass, SectionHeading, sectionSpacing } from "./heading";
 import { ReaderSurface } from "./reader-surface";
@@ -126,94 +129,101 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
 
   return (
     <LessonProvider lessonId={lesson.id} faculty={faculty} year={year}>
-      <ReadingProgress />
-      <LessonGuard articleId={ARTICLE_ID} />
-      {/* The column stays centred; on wide screens the table of contents hangs in the right margin. */}
-      <ReaderSurface className="relative mx-auto w-full">
-        <article id={ARTICLE_ID} className="min-w-0">
-          <header className="font-sans">
-            <Link
-              href={`/${faculty}/${year}/${lesson.certif}`}
-              className="group inline-flex items-center gap-2.5 rounded-full py-1 pr-3 pl-1 text-sm text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <CertifEmblem theme={certifTheme({ slug: lesson.certif, pole: "" })} className="size-7 rounded-full" />
-              <span>
-                {lesson.certifTitle}
-                {lesson.module && <span className="text-subtle"> · {lesson.module}</span>}
-              </span>
-            </Link>
-            <h1 className="rise-in mt-5 text-[2.125rem] leading-[1.1] sm:text-[2.75rem]">{lesson.title}</h1>
-            <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="size-4" strokeWidth={1.6} aria-hidden />≈ {readingMinutes(lesson.markdown)} min de lecture
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <FileText className="size-4" strokeWidth={1.6} aria-hidden />
-                {sourceCount} source{sourceCount > 1 ? "s" : ""}
-              </span>
-              {toc.length > 0 && (
-                <span className="inline-flex items-center gap-1.5">
-                  <ListTree className="size-4" strokeWidth={1.6} aria-hidden />
-                  {toc.length} parties
+      <ToolsProvider>
+        <ReadingProgress />
+        <LessonGuard articleId={ARTICLE_ID} />
+        {/* The column stays centred; on wide screens the table of contents hangs in the right margin. */}
+        <ReaderSurface className="relative mx-auto w-full">
+          <article id={ARTICLE_ID} className="min-w-0">
+            <header className="font-sans">
+              <Link
+                href={`/${faculty}/${year}/${lesson.certif}`}
+                className="group inline-flex items-center gap-2.5 rounded-full py-1 pr-3 pl-1 text-sm text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <CertifEmblem theme={certifTheme({ slug: lesson.certif, pole: "" })} className="size-7 rounded-full" />
+                <span>
+                  {lesson.certifTitle}
+                  {lesson.module && <span className="text-subtle"> · {lesson.module}</span>}
                 </span>
-              )}
-            </p>
-
-            {lesson.status === "draft_unreviewed" && (
-              <p role="note" className="mt-4 text-sm leading-relaxed text-muted">
-                Brouillon non relu par un médecin, reconstruit à partir{" "}
-                {sourceCount > 0 ? (
-                  <a
-                    href="#sources"
-                    className="underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-current"
-                  >
-                    {sourceCount > 1 ? `des ${sourceCount} documents du cours` : "du document du cours"}
-                  </a>
-                ) : (
-                  "des documents du cours"
+              </Link>
+              <h1 className="rise-in mt-5 text-[2.125rem] leading-[1.1] sm:text-[2.75rem]">{lesson.title}</h1>
+              <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="size-4" strokeWidth={1.6} aria-hidden />≈ {readingMinutes(lesson.markdown)} min de lecture
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <FileText className="size-4" strokeWidth={1.6} aria-hidden />
+                  {sourceCount} source{sourceCount > 1 ? "s" : ""}
+                </span>
+                {toc.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <ListTree className="size-4" strokeWidth={1.6} aria-hidden />
+                    {toc.length} parties
+                  </span>
                 )}
-                .
               </p>
-            )}
 
-            <div className="mt-6 flex flex-col">
-              <StatusTracker />
-              <div className={linkRow}>
-                <HighlightsLink />
-                <SourcesToggle />
-                <ReportErrorButton />
+              {lesson.status === "draft_unreviewed" && (
+                <p role="note" className="mt-4 text-sm leading-relaxed text-muted">
+                  Brouillon non relu par un médecin, reconstruit à partir{" "}
+                  {sourceCount > 0 ? (
+                    <a
+                      href="#sources"
+                      className="underline decoration-border underline-offset-4 hover:text-foreground hover:decoration-current"
+                    >
+                      {sourceCount > 1 ? `des ${sourceCount} documents du cours` : "du document du cours"}
+                    </a>
+                  ) : (
+                    "des documents du cours"
+                  )}
+                  .
+                </p>
+              )}
+
+              <div className="mt-6 flex flex-col">
+                <StatusTracker />
+                <div className={linkRow}>
+                  <SourcesToggle />
+                  <ReportErrorButton />
+                </div>
               </div>
-            </div>
-          </header>
+            </header>
 
-          <PlanBlock items={toc} />
+            <PlanBlock items={toc} />
 
-          <HighlightableBody className="lesson-prose mt-10">
-            <LessonMarkdown markdown={parsed.preface} lesson={lesson} />
-            {parsed.sections.map((section) => (
-              <SectionBlock key={section.id} section={section} lesson={lesson} />
-            ))}
-          </HighlightableBody>
+            <MarkedBody
+              lessonId={lesson.id}
+              title={lesson.title}
+              href={`/${faculty}/${year}/lecon/${encodeURIComponent(lesson.id)}`}
+              className="lesson-prose mt-10"
+            >
+              <LessonMarkdown markdown={parsed.preface} lesson={lesson} />
+              {parsed.sections.map((section) => (
+                <SectionBlock key={section.id} section={section} lesson={lesson} />
+              ))}
+            </MarkedBody>
 
-          <footer className="mt-16 flex flex-col gap-12 border-t border-border pt-8">
-            <div className="flex flex-col">
-              <StatusTracker />
-              <div className={linkRow}>
-                <HighlightsLink />
-                <ReportErrorButton />
+            <footer className="mt-16 flex flex-col gap-12 border-t border-border pt-8">
+              <div className="flex flex-col">
+                <StatusTracker />
+                <div className={linkRow}>
+                  <ReportErrorButton />
+                </div>
               </div>
-            </div>
-            <SourceList lesson={lesson} />
-          </footer>
-        </article>
+              <SourceList lesson={lesson} />
+            </footer>
+          </article>
 
-        <aside className="absolute inset-y-0 left-full ml-12 hidden w-52 xl:block" aria-label="Navigation du cours">
-          <div className="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto pb-6 font-sans">
-            <MarginToc items={toc} />
-          </div>
-        </aside>
-        <PlanButton items={toc} />
-      </ReaderSurface>
+          <aside className="absolute inset-y-0 left-full ml-12 hidden w-52 xl:block" aria-label="Navigation du cours">
+            <div className="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto pb-6 font-sans">
+              <MarginToc items={toc} />
+            </div>
+          </aside>
+          <PlanButton items={toc} />
+        </ReaderSurface>
+        <LessonToolbar lessonId={lesson.id} hasGlossary={false} />
+        <ReaderSettingsButton />
+      </ToolsProvider>
     </LessonProvider>
   );
 }

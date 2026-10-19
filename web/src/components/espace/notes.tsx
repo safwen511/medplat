@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 
-import { StudyLink } from "@/components/layout/study-link";
-import type { Highlight } from "@/lib/progress/store";
-
-import { EmptyState, EspaceSection, textLink } from "./section";
+import { EmptyState, EspaceSection } from "./section";
 import { formatDate } from "./stats";
 import { lessonHref, type EspaceYear } from "./types";
 import type { ErrorReport } from "./use-espace-data";
@@ -26,12 +23,6 @@ export function lessonDirectory(years: EspaceYear[]): Map<string, LessonInfo> {
   return map;
 }
 
-function groupByLesson<T extends { lessonId: string }>(items: T[]): [string, T[]][] {
-  const groups = new Map<string, T[]>();
-  for (const item of items) groups.set(item.lessonId, [...(groups.get(item.lessonId) ?? []), item]);
-  return [...groups.entries()];
-}
-
 function plural(count: number, word: string): string {
   return `${count} ${word}${count > 1 ? "s" : ""}`;
 }
@@ -45,70 +36,6 @@ function LessonTitle({ info, fallback }: { info: LessonInfo | undefined; fallbac
     >
       {info.title}
     </Link>
-  );
-}
-
-export function HighlightsSection({
-  highlights,
-  lessons,
-  now,
-  onRemove,
-}: {
-  highlights: Highlight[];
-  lessons: Map<string, LessonInfo>;
-  now: Date;
-  onRemove: (id: string) => void;
-}) {
-  const groups = groupByLesson([...highlights].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-
-  return (
-    <EspaceSection
-      id="surlignages"
-      title="Mes surlignages"
-      description={
-        highlights.length ? `${plural(highlights.length, "passage")} surligné${highlights.length > 1 ? "s" : ""}.` : undefined
-      }
-    >
-      {groups.length === 0 ? (
-        <EmptyState action={<StudyLink className={textLink}>Ouvrir un cours</StudyLink>}>
-          Sélectionne un passage dans un cours pour le surligner : il apparaîtra ici.
-        </EmptyState>
-      ) : (
-        <ul className="flex flex-col gap-8">
-          {groups.map(([lessonId, items]) => {
-            const info = lessons.get(lessonId);
-            return (
-              <li key={lessonId} className="flex flex-col gap-3">
-                <div className="flex flex-col">
-                  <LessonTitle info={info} fallback={lessonId} />
-                  {info && <span className="text-sm text-muted">{info.certifTitle}</span>}
-                </div>
-                <ul className="flex flex-col gap-4">
-                  {items.map((item) => (
-                    <li key={item.id} className="border-l border-border pl-4">
-                      <blockquote className="line-clamp-4 font-serif leading-relaxed">{item.quote}</blockquote>
-                      {item.note && <p className="mt-1 text-[0.9375rem] text-muted">{item.note}</p>}
-                      <p className="flex items-center gap-3 text-sm text-muted">
-                        {formatDate(item.createdAt, now)}
-                        <span aria-hidden>·</span>
-                        <button
-                          type="button"
-                          onClick={() => onRemove(item.id)}
-                          aria-label={`Supprimer ce surlignage${info ? ` de « ${info.title} »` : ""}`}
-                          className="min-h-12 rounded-card underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          Supprimer
-                        </button>
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </EspaceSection>
   );
 }
 

@@ -18,6 +18,9 @@ export interface ReaderSettings {
   width: PageWidth;
   /** The five highlighter colours, as CSS colours. */
   colors: string[];
+  /** Last pen used on lessons: style and colour index. */
+  penStyle: "highlight" | "underline" | "box";
+  penColor: number;
 }
 
 export const DEFAULT_COLORS = ["#fde047", "#86efac", "#7dd3fc", "#f9a8d4", "#fdba74"];
@@ -29,6 +32,8 @@ export const DEFAULTS: ReaderSettings = {
   spacing: "normal",
   width: "normal",
   colors: DEFAULT_COLORS,
+  penStyle: "highlight",
+  penColor: 0,
 };
 
 /** Phone/tablet size, desktop size (px). */

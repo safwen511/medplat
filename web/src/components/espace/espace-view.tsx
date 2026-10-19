@@ -11,6 +11,7 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { StatTile } from "@/components/ui/stat-tile";
 import { validExamDate } from "@/lib/dates";
 import { useMember, type Me } from "@/components/layout/use-member";
+import { AllMarks } from "@/components/lesson/marks/marks-panel";
 import { displayNameOf, UserAvatar } from "@/components/layout/user-avatar";
 import { useProgress } from "@/lib/progress/provider";
 import type { Attempt, Profile } from "@/lib/progress/store";
@@ -19,7 +20,7 @@ import { supabaseEnabled } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
 import { Collection } from "./collection";
-import { HighlightsSection, lessonDirectory, ReportsSection } from "./notes";
+import { lessonDirectory, ReportsSection } from "./notes";
 import { EmptyState, EspaceSection, textLink } from "./section";
 import { SettingsForm } from "./settings-form";
 import { dayKey, daysUntil, formatExamDate, formatMonth, formatSeconds, median, streak } from "./stats";
@@ -31,7 +32,7 @@ const DEFAULT_GOAL = 20;
 /** The student's dashboard: profile, figures, per-certif progress, courses to review, notes, settings. */
 export function EspaceView({ years }: { years: EspaceYear[] }) {
   const { user } = useProgress();
-  const { data, saveProfile, removeHighlight } = useEspaceData(years);
+  const { data, saveProfile } = useEspaceData(years);
   const lessons = useMemo(() => lessonDirectory(years), [years]);
   const me = useMember();
   const { profile, now } = data;
@@ -73,7 +74,9 @@ export function EspaceView({ years }: { years: EspaceYear[] }) {
         </EspaceSection>
       )}
 
-      <HighlightsSection highlights={data.highlights} lessons={lessons} now={now} onRemove={removeHighlight} />
+      <EspaceSection id="surlignages" title="Mes surlignages" description="Tous tes passages, cours par cours.">
+        <AllMarks />
+      </EspaceSection>
       {data.reports && <ReportsSection reports={data.reports} lessons={lessons} now={now} />}
       <SettingsForm key={user?.id ?? "local"} initial={profile} fallbackName={displayNameOf(user)} onSave={saveProfile} />
     </div>
