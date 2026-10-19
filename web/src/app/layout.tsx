@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 
 import { BetaLabel } from "@/components/layout/beta-label";
 import { SiteHeader } from "@/components/layout/site-header";
+import { ReturningBanner } from "@/components/welcome/returning-banner";
 import { ProgressProvider } from "@/lib/progress/provider";
 
 import "./globals.css";
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <ProgressProvider>
             <SiteHeader />
+            <ReturningBanner />
             <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
             {/* On tablets and desktop the beta notice sits in the header; on phones, under the content. */}
             <footer className="px-4 pb-8 pt-2 text-center md:portrait:hidden lg:hidden">

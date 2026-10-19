@@ -64,6 +64,9 @@ Display: **Space Grotesk** (titles, numbers, stat tiles). Body: **IBM Plex Sans*
 - Testers enter a personal access code (no e-mail login for now). A valid code opens the site and
   shows a personal welcome (name, how the site works, what exists, what is coming). Codes are never
   shipped to the browser and never committed.
+- The welcome is a full-screen slideshow of big fading messages (Suivant / Retour, dots, arrow keys,
+  swipe), shown once per device. Returning testers skip the code page and the welcome; each new
+  browser session counts a visit and shows a short "Bon retour" banner that fades out.
 
 ## Forbidden
 - Copied assets, frames, fonts or art from any game.

@@ -17,6 +17,10 @@ interface Entry extends Member {
 
 export const ACCESS_COOKIE = "medplat_access";
 export const ACCESS_MAX_AGE = 60 * 60 * 24 * 120; // 120 days
+/** Visits (browser sessions) of the member on this device, and whether the welcome was completed. */
+export const VISITS_COOKIE = "medplat_visits";
+export const SESSION_COOKIE = "medplat_live"; // session cookie: present while the browser stays open
+export const WELCOMED_COOKIE = "medplat_welcomed";
 
 const encoder = new TextEncoder();
 

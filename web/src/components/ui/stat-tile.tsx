@@ -27,7 +27,7 @@ export function StatTile({
         {icon}
         <span>{label}</span>
       </div>
-      <span className="numeral text-4xl leading-tight font-semibold">{value}</span>
+      <span className="numeral text-4xl leading-tight font-semibold text-foreground">{value}</span>
       {hint && <span className="text-sm text-muted">{hint}</span>}
     </div>
   );
