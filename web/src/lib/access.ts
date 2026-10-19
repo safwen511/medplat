@@ -122,6 +122,17 @@ export async function signMember(member: Member): Promise<string> {
   return `${payload}.${base64url(await hmac(payload))}`;
 }
 
+/**
+ * The member's code, masked ("K7Q2••••••••XM"), for the lesson watermark: enough to trace a
+ * leaked screenshot back to a tester, not enough to sign in with.
+ */
+export function maskedCode(memberId: string): string | null {
+  const code = entries().find((entry) => entry.id === memberId)?.code;
+  if (!code) return null;
+  const clean = normalize(code);
+  return `${clean.slice(0, 4)}${"•".repeat(Math.max(0, clean.length - 6))}${clean.slice(-2)}`;
+}
+
 /** The member in a session cookie, or null when absent, forged or for a revoked code. */
 export async function verifyMember(token: string | undefined): Promise<Member | null> {
   if (!token || !accessEnabled()) return null;

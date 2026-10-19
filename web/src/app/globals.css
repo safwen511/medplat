@@ -362,3 +362,31 @@ body {
 .reader[data-sources="off"] [data-sources-only] {
   display: none;
 }
+
+/* Lesson protection (docs/protection.md): faint watermark; printing shows only a notice. */
+.lesson-watermark {
+  opacity: 0.07;
+}
+:root.light .lesson-watermark {
+  opacity: 0.09;
+}
+.print-notice {
+  display: none;
+}
+@media print {
+  :root:has(.print-notice) body {
+    background: #fff !important;
+  }
+  :root:has(.print-notice) body * {
+    visibility: hidden !important;
+  }
+  :root:has(.print-notice) .print-notice {
+    display: block;
+    visibility: visible !important;
+    position: fixed;
+    inset: 40% 0 auto;
+    text-align: center;
+    font-size: 18pt;
+    color: #000;
+  }
+}

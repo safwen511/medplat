@@ -8,6 +8,8 @@ export interface Me {
   gate: boolean;
   member: { id: string; firstName: string; gender: "m" | "f"; year: string; role?: "doctor" } | null;
   visits?: number;
+  /** Watermark text for lesson pages: name and masked access code. */
+  mark?: string;
 }
 
 /** The beta tester signed in with an access code, refreshed on every navigation (sign-out included). */

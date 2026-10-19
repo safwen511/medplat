@@ -18,6 +18,7 @@ import { ReportErrorButton, StatusTracker } from "./lesson-actions";
 import { LessonProvider } from "./lesson-context";
 import { InlineMarkdown, LessonMarkdown, sectionFigures } from "./lesson-markdown";
 import { parseLesson, plainTitle, type LessonSection } from "./parse";
+import { LessonGuard } from "./lesson-guard";
 import { ReadingProgress } from "./reading-progress";
 import { headingClass, SectionHeading, sectionSpacing } from "./heading";
 import { ReaderSurface } from "./reader-surface";
@@ -126,6 +127,7 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
   return (
     <LessonProvider lessonId={lesson.id} faculty={faculty} year={year}>
       <ReadingProgress />
+      <LessonGuard articleId={ARTICLE_ID} />
       {/* The column stays centred; on wide screens the table of contents hangs in the right margin. */}
       <ReaderSurface className="relative mx-auto w-full">
         <article id={ARTICLE_ID} className="min-w-0">
