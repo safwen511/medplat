@@ -3,13 +3,14 @@
 import { CalendarDays, CircleCheck, DoorOpen, Flame, ListChecks, LogOut, PlayCircle, Settings, Sparkles, Target, Timer } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { leave, signOut as signOutCode } from "@/app/acces/actions";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { StatTile } from "@/components/ui/stat-tile";
 import { validExamDate } from "@/lib/dates";
+import { useMember, type Me } from "@/components/layout/use-member";
 import { displayNameOf, UserAvatar } from "@/components/layout/user-avatar";
 import { useProgress } from "@/lib/progress/provider";
 import type { Attempt, Profile } from "@/lib/progress/store";
@@ -26,27 +27,6 @@ import { lessonHref, shortCertifTitle, type EspaceYear } from "./types";
 import { useEspaceData } from "./use-espace-data";
 
 const DEFAULT_GOAL = 20;
-
-interface Me {
-  member: { firstName: string; gender: "m" | "f"; year: string } | null;
-  visits?: number;
-}
-
-/** The tester's beta membership (access code), when the gate is on. */
-function useMember(): Me | null {
-  const [me, setMe] = useState<Me | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/me", { cache: "no-store" })
-      .then((response) => (response.ok ? (response.json() as Promise<Me>) : null))
-      .then((data) => !cancelled && setMe(data))
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return me;
-}
 
 /** The student's dashboard: profile, figures, per-certif progress, courses to review, notes, settings. */
 export function EspaceView({ years }: { years: EspaceYear[] }) {

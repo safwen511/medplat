@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { BetaLabel } from "./beta-label";
 import { BottomNav } from "./bottom-nav";
 import { activeSection, sections, studyBase, studyLinks } from "./nav";
+import { useMember } from "./use-member";
 import { useMounted } from "./use-mounted";
 import { useProfile } from "./use-profile";
 import { displayNameOf, UserAvatar } from "./user-avatar";
@@ -47,6 +48,10 @@ const navLink = cn(
 export function SiteHeader() {
   const { user } = useProgress();
   const { profile } = useProfile();
+  const me = useMember();
+  // Signed in: a Google account, a beta access code, or (open demo, no codes) a local profile.
+  const member = Boolean(me?.member);
+  const signedIn = Boolean(user) || member || (me?.gate === false && Boolean(profile?.onboarded));
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useMounted();
   const pathname = usePathname();
@@ -107,7 +112,7 @@ export function SiteHeader() {
                 <Moon className="size-5" strokeWidth={1.5} aria-hidden />
               )}
             </button>
-            {user || profile?.onboarded ? (
+            {signedIn ? (
               <Link
                 href="/espace"
                 aria-label={name ? `Mon espace (${name})` : "Mon espace"}
@@ -127,7 +132,7 @@ export function SiteHeader() {
                 Se connecter
               </Link>
             )}
-            {!user && profile?.onboarded && (
+            {!user && member && (
               <form action={signOut}>
                 <button
                   type="submit"
