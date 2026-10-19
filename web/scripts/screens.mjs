@@ -22,7 +22,8 @@ if (!line) throw new Error(`no code for ${who}`);
 const code = line.split(" · ").at(-1).trim();
 
 const SIZES = { tablet: { width: 1024, height: 768 }, phone: { width: 390, height: 844 } };
-const browser = await chromium.launch();
+// CHROMIUM_ARGS: extra flags, e.g. --host-resolver-rules to force IPv4 on a network whose IPv6 is broken.
+const browser = await chromium.launch({ args: process.env.CHROMIUM_ARGS?.split(/\s+(?=--)/).filter(Boolean) ?? [] });
 try {
   for (const [size, viewport] of Object.entries(SIZES)) {
     const context = await browser.newContext({ viewport, colorScheme: "dark", locale: "fr-FR" });
