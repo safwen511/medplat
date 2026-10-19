@@ -5,68 +5,89 @@
    One accent (--primary), amber for high-yield, muted green/red for answers only.
    Glow marks focus/hover/selection; motion is transform/opacity only, 150–300ms. */
 
+/* Hover only where a pointer can really hover: a mouse, or a stylus that hovers above the screen
+   (any-hover). Touch-only screens get the same information by tapping. */
+@custom-variant hover {
+  @media (any-hover: hover) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
 :root,
 :root.dark {
   color-scheme: dark;
-  --background: #070b16;
-  --panel: #0d1424;
-  --panel-border: #1b2640;
-  --surface: #131c31;
-  --surface-muted: #19233b;
-  --foreground: #e6ecf7;
-  --muted: #8b98b2;
-  --border: #22304d;
-  --primary: #4cc3d4;
-  --primary-hover: #73d4e1;
-  --primary-soft: #11303a;
-  --primary-foreground: #04131a;
+  --background: #05070c;
+  --panel: #0a0e16;
+  --panel-border: rgb(255 255 255 / 0.065);
+  --surface: #0f141e;
+  --surface-muted: #161c28;
+  --foreground: #eef1f6;
+  --muted: #8a93a6;
+  --subtle: #5d6678;
+  --border: rgb(255 255 255 / 0.08);
+  --border-strong: rgb(255 255 255 / 0.14);
+  --primary: #5fd3c6;
+  --primary-hover: #86e0d6;
+  --primary-soft: rgb(95 211 198 / 0.12);
+  --primary-foreground: #03110f;
   --correct: #4fc48d;
-  --correct-soft: #10291f;
+  --correct-soft: rgb(79 196 141 / 0.12);
   --wrong: #ef7d7a;
-  --wrong-soft: #321a1d;
+  --wrong-soft: rgb(239 125 122 / 0.12);
   --highyield: #f0b54d;
-  --highyield-soft: #2e2410;
-  --ring: #4cc3d4;
-  --glow: 0 0 0 1px rgb(76 195 212 / 0.4), 0 0 22px rgb(76 195 212 / 0.2);
-  --glow-strong: 0 0 0 1px rgb(76 195 212 / 0.55), 0 0 36px rgb(76 195 212 / 0.32);
-  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
-  --shadow-2: 0 10px 28px rgb(0 0 0 / 0.45);
-  --shadow-3: 0 22px 56px rgb(0 0 0 / 0.55);
+  --highyield-soft: rgb(240 181 77 / 0.13);
+  --ring: #5fd3c6;
+  --glow: 0 0 0 1px rgb(95 211 198 / 0.32), 0 8px 28px -8px rgb(95 211 198 / 0.35);
+  --glow-strong: 0 0 0 1px rgb(95 211 198 / 0.5), 0 12px 40px -8px rgb(95 211 198 / 0.45);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-2: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 14px 32px -14px rgb(0 0 0 / 0.75);
+  --shadow-3: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 28px 60px -20px rgb(0 0 0 / 0.8);
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 0.045);
   --radius: 16px;
-  --radius-panel: 20px;
+  --radius-panel: 22px;
   --radius-control: 12px;
   --dur-fast: 150ms;
-  --dur-base: 200ms;
+  --dur-base: 220ms;
   --dur-slow: 300ms;
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --aurora: radial-gradient(1100px 520px at 50% -12%, rgb(95 211 198 / 0.08), transparent 62%),
+    radial-gradient(700px 380px at 92% 4%, rgb(120 140 255 / 0.05), transparent 60%);
 }
 
 :root.light {
   color-scheme: light;
-  --background: #edf1f7;
+  --background: #f5f6f8;
   --panel: #ffffff;
-  --panel-border: #d9e0ec;
-  --surface: #f5f7fb;
-  --surface-muted: #ebeff6;
-  --foreground: #111a2b;
-  --muted: #5a6680;
-  --border: #d4dcea;
-  --primary: #0e7f90;
-  --primary-hover: #0b6a78;
-  --primary-soft: #dff2f5;
+  --panel-border: rgb(15 23 42 / 0.07);
+  --surface: #ffffff;
+  --surface-muted: #eef0f4;
+  --foreground: #0d1422;
+  --muted: #5b6579;
+  --subtle: #8a93a6;
+  --border: rgb(15 23 42 / 0.09);
+  --border-strong: rgb(15 23 42 / 0.16);
+  --primary: #0d8a7e;
+  --primary-hover: #0a7369;
+  --primary-soft: rgb(13 138 126 / 0.1);
   --primary-foreground: #ffffff;
   --correct: #1f8a5a;
-  --correct-soft: #e2f4ea;
+  --correct-soft: rgb(31 138 90 / 0.1);
   --wrong: #c2413f;
-  --wrong-soft: #fbe8e7;
-  --highyield: #b16f12;
-  --highyield-soft: #fcf0dc;
-  --ring: #0e7f90;
-  --glow: 0 0 0 1px rgb(14 127 144 / 0.35), 0 0 18px rgb(14 127 144 / 0.14);
-  --glow-strong: 0 0 0 1px rgb(14 127 144 / 0.5), 0 0 28px rgb(14 127 144 / 0.22);
-  --shadow-1: 0 1px 2px rgb(17 26 43 / 0.08);
-  --shadow-2: 0 10px 28px rgb(17 26 43 / 0.1);
-  --shadow-3: 0 22px 56px rgb(17 26 43 / 0.16);
+  --wrong-soft: rgb(194 65 63 / 0.09);
+  --highyield: #a8650c;
+  --highyield-soft: rgb(176 111 18 / 0.11);
+  --ring: #0d8a7e;
+  --glow: 0 0 0 1px rgb(13 138 126 / 0.28), 0 8px 24px -10px rgb(13 138 126 / 0.3);
+  --glow-strong: 0 0 0 1px rgb(13 138 126 / 0.45), 0 12px 32px -10px rgb(13 138 126 / 0.38);
+  --shadow-1: 0 1px 2px rgb(15 23 42 / 0.06);
+  --shadow-2: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 28px -14px rgb(15 23 42 / 0.16);
+  --shadow-3: 0 2px 4px rgb(15 23 42 / 0.04), 0 26px 50px -22px rgb(15 23 42 / 0.24);
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --aurora: radial-gradient(1100px 520px at 50% -12%, rgb(13 138 126 / 0.07), transparent 62%),
+    radial-gradient(700px 380px at 92% 4%, rgb(90 110 230 / 0.05), transparent 60%);
 }
 
 @theme inline {
@@ -77,7 +98,9 @@
   --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-soft: var(--primary-soft);
@@ -103,7 +126,9 @@
 }
 
 body {
-  background: var(--background);
+  background: var(--aurora), var(--background);
+  background-repeat: no-repeat;
+  overflow-x: clip;
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
   font-size: 17px;
@@ -116,16 +141,24 @@ body {
   h3 {
     font-family: var(--font-display), sans-serif;
     font-weight: 600;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  h1 {
+    letter-spacing: -0.032em;
+  }
+  :focus-visible {
+    outline-color: var(--ring);
   }
 }
 
 @layer components {
-  /* Level 2: a section panel with its title row. */
+  /* Level 2: a section panel with its title row. A faint top light gives it depth. */
   .panel {
-    background: var(--panel);
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.022), transparent 120px), var(--panel);
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-panel);
+    box-shadow: var(--highlight);
     padding: 1.5rem;
   }
   @media (min-width: 640px) {
@@ -138,6 +171,58 @@ body {
     font-family: var(--font-display), sans-serif;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
+  }
+  /* Small label above a title: display face, spaced capitals. */
+  .eyebrow {
+    font-family: var(--font-display), sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  /* Loading placeholder with a moving sheen (transform only). */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-muted);
+    border-radius: var(--radius-control);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+    animation: sheen 1.4s var(--ease-in-out) infinite;
+  }
+  /* Fine film grain for hero surfaces (not the whole page: cheap on tablets). */
+  .grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* Entrance of a page or a block: opacity only, so fixed children never jump. */
+  .page-enter {
+    animation: fade-in var(--dur-base) var(--ease-out) both;
+  }
+  .rise-in {
+    animation: rise-in 520ms var(--ease-out) both;
+  }
+}
+
+@keyframes sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
   }
 }
 

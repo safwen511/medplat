@@ -17,9 +17,10 @@ const vip = readFileSync(path.join(import.meta.dirname, "..", "..", "vip"), "utf
   .split("\n")
   .filter((line) => line && !line.startsWith("#"));
 const NAMES = { ala: "Ala Arfa", salsabil: "Salsabil Yahyaoui", owner: "Safwen", marwen: "Marwen Yahyaoui" };
-const line = vip.find((entry) => entry.startsWith(NAMES[who]));
-if (!line) throw new Error(`no code for ${who}`);
-const code = line.split(" · ").at(-1).trim();
+// "guest": no code, for the public pages (landing, code page).
+const line = who === "guest" ? null : vip.find((entry) => entry.startsWith(NAMES[who]));
+if (who !== "guest" && !line) throw new Error(`no code for ${who}`);
+const code = line?.split(" · ").at(-1).trim();
 
 const SIZES = { tablet: { width: 1024, height: 768 }, phone: { width: 390, height: 844 } };
 // CHROMIUM_ARGS: extra flags, e.g. --host-resolver-rules to force IPv4 on a network whose IPv6 is broken.
@@ -28,10 +29,21 @@ try {
   for (const [size, viewport] of Object.entries(SIZES)) {
     const context = await browser.newContext({ viewport, colorScheme: "dark", locale: "fr-FR" });
     const page = await context.newPage();
-    await page.goto(`${BASE}/acces`);
-    await page.fill('input[name="code"]', code);
-    await Promise.all([page.waitForURL(/\/bienvenue/), page.click('button[type="submit"]')]);
+    if (code) {
+      await page.goto(`${BASE}/acces`);
+      await page.fill('input[name="code"]', code);
+      await Promise.all([page.waitForURL(/\/bienvenue/), page.click('button[type="submit"]')]);
+    }
     const shoot = async (label) => {
+      // Scroll through the page first so scroll-triggered entrances have played.
+      await page.evaluate(async () => {
+        for (let y = 0; y < document.body.scrollHeight; y += window.innerHeight / 2) {
+          window.scrollTo(0, y);
+          await new Promise((resolve) => setTimeout(resolve, 120));
+        }
+        window.scrollTo(0, 0);
+      });
+      await page.waitForTimeout(700);
       const name = `${who}-${size}-${label}.png`;
       await page.screenshot({ path: path.join(outDir, name), fullPage: true });
       console.log(name);

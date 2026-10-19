@@ -6,12 +6,13 @@ import { cn } from "@/lib/utils";
 
 import { styles } from "./styles";
 
-const QUERY = "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+// Any device with a hovering pointer: a mouse, or a stylus that hovers above a tablet screen.
+const QUERY = "(any-hover: hover) and (prefers-reduced-motion: no-preference)";
 
 /**
- * 3D tilt that follows a mouse pointer (rotateX/rotateY up to `max` degrees, lift and glare) and
+ * 3D tilt that follows a hovering pointer (mouse, or a stylus above the screen) (rotateX/rotateY up to `max` degrees, lift and glare) and
  * springs back on leave. CSS transforms only, driven through custom properties so moving the
- * mouse never re-renders React. Inert on touch screens and with prefers-reduced-motion.
+ * the pointer never re-renders React. Inert for touch (fingers) and with prefers-reduced-motion.
  * Place a <Glare /> inside the shape that should catch the light.
  */
 export function Tilt({ children, className, max = 10 }: { children: ReactNode; className?: string; max?: number }) {
@@ -31,7 +32,7 @@ export function Tilt({ children, className, max = 10 }: { children: ReactNode; c
 
   function onPointerMove(event: PointerEvent<HTMLDivElement>) {
     const element = ref.current;
-    if (!element || !enabled.current || event.pointerType !== "mouse") return;
+    if (!element || !enabled.current || event.pointerType === "touch") return;
     const rect = element.getBoundingClientRect();
     const x = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
     const y = Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height));

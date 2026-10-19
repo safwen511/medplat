@@ -352,17 +352,26 @@
   transform: translate(0, -2px) rotate(-0.5deg);
 }
 
-.mpc-deck:hover .mpc-peek[data-i="0"],
 .mpc-deck:focus-visible .mpc-peek[data-i="0"] {
   transform: translate(-24px, -4px) rotate(-9deg);
 }
-.mpc-deck:hover .mpc-peek[data-i="1"],
 .mpc-deck:focus-visible .mpc-peek[data-i="1"] {
   transform: translate(26px, -6px) rotate(7deg);
 }
-.mpc-deck:hover .mpc-peek[data-i="2"],
 .mpc-deck:focus-visible .mpc-peek[data-i="2"] {
   transform: translate(0, -12px) rotate(-0.5deg);
+}
+/* Hover only where the pointer really hovers (mouse, hovering stylus): no sticky hover on touch. */
+@media (any-hover: hover) {
+  .mpc-deck:hover .mpc-peek[data-i="0"] {
+    transform: translate(-24px, -4px) rotate(-9deg);
+  }
+  .mpc-deck:hover .mpc-peek[data-i="1"] {
+    transform: translate(26px, -6px) rotate(7deg);
+  }
+  .mpc-deck:hover .mpc-peek[data-i="2"] {
+    transform: translate(0, -12px) rotate(-0.5deg);
+  }
 }
 
 .mpc-deck-front {

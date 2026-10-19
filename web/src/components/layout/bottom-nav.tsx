@@ -1,7 +1,9 @@
 "use client";
 
+import { motion } from "motion/react";
 import Link from "next/link";
 
+import { PRESS, SPRING } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 import type { Section, SectionId } from "./nav";
@@ -10,10 +12,12 @@ import type { Section, SectionId } from "./nav";
 // page reserves its height (plus the iPhone home-indicator area) to keep the end of every page
 // reachable. React hoists this <style> into <head>.
 const RESERVE_SPACE = `@media (width < 64rem) and (orientation: portrait) {
-  body { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
+  body { padding-bottom: calc(4.75rem + env(safe-area-inset-bottom)); }
 }`;
 
-/** Calm bottom tab bar: thin icons with labels, the current section in the accent colour. */
+const MotionLink = motion.create(Link);
+
+/** Glass tab bar: icons with labels; a soft pill slides to the current section. */
 export function BottomNav({ items, active }: { items: Section[]; active: SectionId | null }) {
   return (
     <>
@@ -22,25 +26,40 @@ export function BottomNav({ items, active }: { items: Section[]; active: Section
       </style>
       <nav
         aria-label="Navigation principale"
-        className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-border bg-background pb-[env(safe-area-inset-bottom)] max-lg:portrait:block"
+        className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-border bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl backdrop-saturate-150 max-lg:portrait:block"
       >
-        <ul className="mx-auto grid h-[4.5rem] max-w-xl grid-cols-3">
+        <ul className="mx-auto grid h-[4.75rem] max-w-xl grid-cols-3 px-2">
           {items.map((item) => {
             const current = active === item.id;
             return (
               <li key={item.id} className="flex">
-                <Link
+                <MotionLink
                   href={item.href}
                   aria-current={current ? "page" : undefined}
+                  whileTap={PRESS}
                   className={cn(
-                    "flex flex-1 flex-col items-center gap-1 pt-3 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                    current ? "font-medium text-primary" : "text-muted active:text-foreground",
+                    "relative flex flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    current ? "font-medium text-foreground" : "text-muted",
                   )}
                 >
-                  <item.icon className="size-6" strokeWidth={1.5} aria-hidden />
+                  <span className="relative flex h-8 w-14 items-center justify-center">
+                    {current && (
+                      <motion.span
+                        layoutId="tab-pill"
+                        transition={SPRING}
+                        aria-hidden
+                        className="absolute inset-0 rounded-full bg-primary-soft"
+                      />
+                    )}
+                    <item.icon
+                      className={cn("relative size-[1.375rem]", current && "text-primary")}
+                      strokeWidth={current ? 1.9 : 1.5}
+                      aria-hidden
+                    />
+                  </span>
                   <span>{item.label}</span>
-                  {item.soon && <span className="-mt-1 text-[0.6875rem] leading-none text-muted">bientôt</span>}
-                </Link>
+                  {item.soon && <span className="-mt-1 text-[0.625rem] leading-none text-subtle">bientôt</span>}
+                </MotionLink>
               </li>
             );
           })}
