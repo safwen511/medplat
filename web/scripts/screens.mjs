@@ -3,6 +3,7 @@
 // Usage: node scripts/screens.mjs <out-dir> <member: ala|salsabil|owner> <route> [<route> ...]
 // Special routes: "welcome" shoots every welcome slide and finishes it; "revisit" starts a new
 // browser session (visit counter +1) and shoots the year home with its "Bon retour" banner.
+// "<route>#flip" taps the first card (folder or course) of the page and shoots it flipped.
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -53,6 +54,14 @@ try {
         await page.getByText("Bon retour").waitFor({ timeout: 15000 }).catch(() => console.log("no banner"));
         await page.waitForTimeout(400);
         await shoot("revisit");
+        continue;
+      }
+      if (route.endsWith("#flip")) {
+        await page.goto(`${BASE}${route.slice(0, -5)}`, { waitUntil: "networkidle" });
+        await page.locator("button.mpc-deck, .mpc-face button").first().click();
+        await page.waitForTimeout(900);
+        await page.screenshot({ path: path.join(outDir, `${who}-${size}-flip.png`) });
+        console.log(`${who}-${size}-flip.png`);
         continue;
       }
       await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });

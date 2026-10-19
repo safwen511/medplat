@@ -106,7 +106,7 @@ export function SiteHeader() {
                 <Moon className="size-5" strokeWidth={1.5} aria-hidden />
               )}
             </button>
-            {user ? (
+            {user || profile?.onboarded ? (
               <Link
                 href="/espace"
                 aria-label={name ? `Mon espace (${name})` : "Mon espace"}
