@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** A titled block of "Mon espace", reachable by anchor (#id). Hierarchy from type and space only. */
+/** A titled panel of "Mon espace", reachable by anchor (#id): title left, optional action right. */
 export function EspaceSection({
   id,
   title,
@@ -19,15 +19,15 @@ export function EspaceSection({
   className?: string;
 }) {
   return (
-    <section id={id} aria-labelledby={`${id}-titre`} className={cn("flex scroll-mt-20 flex-col gap-4", className)}>
+    <section id={id} aria-labelledby={`${id}-titre`} className={cn("panel flex scroll-mt-20 flex-col gap-6", className)}>
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-          <h2 id={`${id}-titre`} className="text-2xl leading-tight">
+          <h2 id={`${id}-titre`} className="text-xl leading-tight sm:text-2xl">
             {title}
           </h2>
           {action}
         </div>
-        {description && <p className="text-muted">{description}</p>}
+        {description && <p className="text-sm text-muted">{description}</p>}
       </div>
       {children}
     </section>

@@ -1,10 +1,15 @@
 "use client";
 
-import { validExamDate } from "@/lib/dates";
+import { CalendarDays, CircleCheck, DoorOpen, Flame, ListChecks, PlayCircle, Settings, Sparkles, Target, Timer } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { leave } from "@/app/acces/actions";
+import { Button } from "@/components/ui/button";
+import { ProgressRing } from "@/components/ui/progress-ring";
+import { StatTile } from "@/components/ui/stat-tile";
+import { validExamDate } from "@/lib/dates";
 import { displayNameOf, UserAvatar } from "@/components/layout/user-avatar";
 import { useProgress } from "@/lib/progress/provider";
 import type { Attempt, Profile } from "@/lib/progress/store";
@@ -17,35 +22,62 @@ import { HighlightsSection, lessonDirectory, ReportsSection } from "./notes";
 import { EmptyState, EspaceSection, textLink } from "./section";
 import { SettingsForm } from "./settings-form";
 import { dayKey, daysUntil, formatExamDate, formatMonth, formatSeconds, median, streak } from "./stats";
-import type { EspaceYear } from "./types";
+import { lessonHref, shortCertifTitle, type EspaceYear } from "./types";
 import { useEspaceData } from "./use-espace-data";
 
 const DEFAULT_GOAL = 20;
 
-/** A calm personal page: a profile line, then sections set in type. The settings form is the one card. */
+interface Me {
+  member: { firstName: string; gender: "m" | "f"; year: string } | null;
+  visits?: number;
+}
+
+/** The tester's beta membership (access code), when the gate is on. */
+function useMember(): Me | null {
+  const [me, setMe] = useState<Me | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/me", { cache: "no-store" })
+      .then((response) => (response.ok ? (response.json() as Promise<Me>) : null))
+      .then((data) => !cancelled && setMe(data))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return me;
+}
+
+/** The student's dashboard: profile, figures, per-certif progress, courses to review, notes, settings. */
 export function EspaceView({ years }: { years: EspaceYear[] }) {
   const { user } = useProgress();
   const { data, saveProfile, removeHighlight } = useEspaceData(years);
   const lessons = useMemo(() => lessonDirectory(years), [years]);
+  const me = useMember();
   const { profile, now } = data;
   const year = years.find((item) => item.year === profile?.year && item.faculty === (profile?.faculty || "sfax"));
-  const name = displayNameOf(user, profile?.displayName);
+  const name = displayNameOf(user, profile?.displayName) ?? me?.member?.firstName ?? null;
 
   if (data.loading)
     return (
-      <div className="mx-auto max-w-[640px] py-8" aria-busy="true">
+      <div className="mx-auto max-w-5xl py-8" aria-busy="true">
         <p className="text-muted">Chargement de ton espace…</p>
       </div>
     );
 
+  const attempts = year ? data.attempts.filter((item) => item.year === year.year && item.faculty === year.faculty) : [];
+
   return (
-    <div className="mx-auto flex max-w-[640px] flex-col gap-14 py-4 sm:py-8">
-      <ProfileLine profile={profile} year={year} name={name} now={now} />
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 sm:gap-16">
+      <ProfilePanel profile={profile} year={year} name={name} now={now} me={me} />
 
       {year ? (
         <>
-          <ProgressSection year={year} attempts={data.attempts} goal={profile?.dailyGoal ?? DEFAULT_GOAL} now={now} />
-          <Collection year={year} progress={data.progress} />
+          <ProgressPanel year={year} attempts={attempts} goal={profile?.dailyGoal ?? DEFAULT_GOAL} now={now} />
+          <div className="grid grid-cols-1 gap-12 sm:gap-16 lg:grid-cols-2 lg:gap-6 [&>*]:min-w-0">
+            <Collection year={year} progress={data.progress} attempts={attempts} />
+            <ToReview year={year} attempts={attempts} />
+          </div>
         </>
       ) : (
         <EspaceSection id="progression" title="Ma progression">
@@ -68,21 +100,24 @@ export function EspaceView({ years }: { years: EspaceYear[] }) {
   );
 }
 
-// Profile line ----------------------------------------------------------------------------------
+// Profile ---------------------------------------------------------------------------------------
 
-function ProfileLine({
+function ProfilePanel({
   profile,
   year,
   name,
   now,
+  me,
 }: {
   profile: Profile | null;
   year: EspaceYear | undefined;
   name: string | null;
   now: Date;
+  me: Me | null;
 }) {
   const { user, store } = useProgress();
   const router = useRouter();
+  const member = me?.member;
 
   const signOut = async () => {
     await browserClient()?.auth.signOut();
@@ -97,82 +132,121 @@ function ProfileLine({
   ].filter(Boolean);
 
   return (
-    <header className="flex flex-col gap-6">
-      <h1 className="text-3xl leading-tight sm:text-4xl">Mon espace</h1>
-      <div className="flex items-center gap-4">
-        <UserAvatar user={user} name={name} size="md" />
-        <div className="flex min-w-0 flex-col">
-          <p className="truncate text-lg font-medium">{name ?? "Étudiant·e"}</p>
-          <p className="text-[0.9375rem] text-muted">{details.join(" · ")}</p>
+    <section aria-labelledby="espace-titre" className="panel relative flex flex-col gap-8 overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "radial-gradient(55% 90% at 0% 0%, var(--primary-soft), transparent 70%)" }}
+      />
+      <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-5">
+          <span className="rounded-full shadow-glow">
+            <UserAvatar user={user} name={name} size="md" />
+          </span>
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 id="espace-titre" className="truncate text-3xl leading-tight sm:text-4xl">
+              {name ?? "Mon espace"}
+            </h1>
+            <p className="text-[0.9375rem] text-muted">{details.join(" · ")}</p>
+            {member && (
+              <span className="mt-1 inline-flex items-center gap-1.5 self-start rounded-full bg-primary-soft px-3 py-1 text-sm text-primary">
+                <Sparkles className="size-3.5" aria-hidden />
+                {member.gender === "f" ? "Testeuse" : "Testeur"} bêta
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {member && (
+            <Button asChild variant="outline">
+              <Link href="/bienvenue">Revoir l&apos;accueil</Link>
+            </Button>
+          )}
+          <Button asChild variant="ghost">
+            <a href="#reglages">
+              <Settings aria-hidden /> Réglages
+            </a>
+          </Button>
         </div>
       </div>
-      <div className="flex flex-col gap-2">
+
+      <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Countdown examDate={validExamDate(profile?.examDate, now)} now={now} />
-        {store.kind === "local" && (
-          <p className="text-[0.9375rem] text-muted">
-            {supabaseEnabled ? (
-              <>
-                Tu n&apos;es pas connecté·e : ta progression reste dans ce navigateur.{" "}
-                <Link href="/connexion" className="font-medium text-foreground underline underline-offset-4">
-                  Se connecter
-                </Link>
-              </>
-            ) : (
-              "Mode démo : la connexion n'est pas encore ouverte, ta progression reste dans ce navigateur."
-            )}
-          </p>
+        {member && me?.visits !== undefined && (
+          <StatTile icon={<DoorOpen className="size-4" aria-hidden />} label="visites" value={me.visits} />
         )}
-        {user && (
-          <button type="button" onClick={signOut} className={cn(textLink, "self-start font-normal text-muted hover:text-foreground")}>
-            Se déconnecter
-          </button>
-        )}
+        <StatTile
+          icon={<Target className="size-4" aria-hidden />}
+          label="objectif du jour"
+          value={profile?.dailyGoal ?? DEFAULT_GOAL}
+          hint="questions"
+        />
       </div>
-    </header>
+
+      {(store.kind === "local" || user || member) && (
+        <div className="relative flex flex-col gap-1 text-[0.9375rem] text-muted">
+          {store.kind === "local" && (
+            <p>
+              {supabaseEnabled && !member ? (
+                <>
+                  Tu n&apos;es pas connecté·e : ta progression reste dans ce navigateur.{" "}
+                  <Link href="/connexion" className="font-medium text-foreground underline underline-offset-4">
+                    Se connecter
+                  </Link>
+                </>
+              ) : (
+                "Pendant la bêta, ta progression reste sur cet appareil."
+              )}
+            </p>
+          )}
+          {user && (
+            <button type="button" onClick={signOut} className={cn(textLink, "self-start font-normal text-muted hover:text-foreground")}>
+              Se déconnecter
+            </button>
+          )}
+          {member && (
+            <form action={leave}>
+              <button type="submit" className={cn(textLink, "font-normal text-muted hover:text-foreground")}>
+                Changer de code d&apos;accès
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
 function Countdown({ examDate, now }: { examDate: string | null; now: Date }) {
   const days = examDate ? daysUntil(examDate, now) : null;
-  if (days === null || !examDate)
+  if (days === null || !examDate || days < 0)
     return (
-      <p className="text-[0.9375rem] text-muted">
-        <a href="#reglages" className="font-medium text-foreground underline underline-offset-4">
-          Ajoute la date de ton certif
-        </a>{" "}
-        pour voir le compte à rebours.
-      </p>
-    );
-  const date = formatExamDate(examDate);
-  if (days < 0)
-    return (
-      <p className="text-[0.9375rem] text-muted">
-        La date de ton certif ({date}) est passée.{" "}
-        <a href="#reglages" className="font-medium text-foreground underline underline-offset-4">
-          Mets-la à jour
-        </a>
-      </p>
-    );
-  const when =
-    days === 0 ? "aujourd'hui" : days === 1 ? "demain" : (
-      <>
-        dans <span className="font-medium tabular-nums text-foreground">{days} jours</span>
-      </>
+      <a
+        href="#reglages"
+        className="col-span-2 flex flex-col justify-center gap-1 rounded-card border border-dashed border-border bg-surface p-5 transition-shadow duration-200 hover:shadow-glow focus-visible:shadow-glow focus-visible:outline-none sm:col-span-1"
+      >
+        <span className="flex items-center gap-2 text-sm text-muted">
+          <CalendarDays className="size-4" aria-hidden /> date du certif
+        </span>
+        <span className="text-lg font-semibold">
+          {days !== null && days < 0 ? "Mets à jour la date de ton certif" : "Ajoute la date de ton certif"}
+        </span>
+      </a>
     );
   return (
-    <p className="text-[0.9375rem] text-muted">
-      Ton prochain certif est {when}, le {date}.
-    </p>
+    <StatTile
+      className="col-span-2 sm:col-span-1"
+      icon={<CalendarDays className="size-4" aria-hidden />}
+      label="avant ton certif"
+      value={days === 0 ? "Jour J" : `J-${days}`}
+      hint={formatExamDate(examDate)}
+    />
   );
 }
 
 // Progression -----------------------------------------------------------------------------------
 
-function Num({ children }: { children: ReactNode }) {
-  return <span className="font-medium tabular-nums text-foreground">{children}</span>;
-}
-
-function ProgressSection({
+function ProgressPanel({
   year,
   attempts,
   goal,
@@ -183,61 +257,117 @@ function ProgressSection({
   goal: number;
   now: Date;
 }) {
-  const mine = attempts.filter((item) => item.year === year.year && item.faculty === year.faculty);
   const base = `/${year.faculty}/${year.year}`;
-
-  if (!mine.length)
-    return (
-      <EspaceSection id="progression" title="Ma progression">
-        <EmptyState
-          action={
-            <Link href={`${base}/quiz`} className={textLink}>
-              Faire un quiz
-            </Link>
-          }
-        >
-          Tu n&apos;as pas encore répondu à une question en {year.yearLabel}.
-        </EmptyState>
-      </EspaceSection>
-    );
-
-  const correct = mine.filter((item) => item.correct).length;
-  const precision = Math.round((correct / mine.length) * 100);
-  const medianTime = median(mine.map((item) => item.timeMs));
-  const days = streak(mine, now);
+  const correct = attempts.filter((item) => item.correct).length;
+  const precision = attempts.length ? Math.round((correct / attempts.length) * 100) : null;
+  const medianTime = median(attempts.map((item) => item.timeMs));
+  const days = streak(attempts, now);
   const today = dayKey(now);
-  const answeredToday = mine.filter((item) => dayKey(new Date(item.createdAt)) === today).length;
+  const answeredToday = attempts.filter((item) => dayKey(new Date(item.createdAt)) === today).length;
 
   return (
     <EspaceSection
       id="progression"
       title="Ma progression"
+      description={year.yearLabel}
       action={
-        <Link href={`${base}/progression`} className={textLink}>
-          Voir le détail
-        </Link>
+        attempts.length ? (
+          <Link href={`${base}/progression`} className={textLink}>
+            Voir le détail
+          </Link>
+        ) : (
+          <Button asChild className="shadow-glow">
+            <Link href={`${base}/quiz`}>
+              <PlayCircle aria-hidden /> Faire un quiz
+            </Link>
+          </Button>
+        )
       }
     >
-      <div className="flex flex-col gap-2 text-muted">
-        <p>
-          Tu as répondu à <Num>{mine.length.toLocaleString("fr-FR")}</Num> question{mine.length > 1 ? "s" : ""}, avec{" "}
-          <Num>{precision} %</Num> de bonnes réponses. Temps médian : <Num>{formatSeconds(medianTime)}</Num> par
-          question.
-        </p>
-        <p>
-          Aujourd&apos;hui :{" "}
-          <Num>
-            {answeredToday} / {goal}
-          </Num>{" "}
-          questions de ton objectif du jour.
-          {days > 0 && (
-            <>
-              {" "}
-              Tu révises depuis <Num>{days === 1 ? "1 jour" : `${days} jours`}</Num> d&apos;affilée.
-            </>
-          )}
-        </p>
+      <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-stretch">
+        <div className="flex flex-col items-center justify-center gap-2 rounded-card border border-border bg-surface px-8 py-5">
+          <ProgressRing value={(answeredToday / goal) * 100} size={128} stroke={11} label="Objectif du jour">
+            <span className="flex flex-col items-center leading-none">
+              <span className="text-3xl">{answeredToday}</span>
+              <span className="mt-1 text-sm font-normal text-muted">/ {goal}</span>
+            </span>
+          </ProgressRing>
+          <span className="text-sm text-muted">objectif du jour</span>
+        </div>
+        <div className="grid w-full flex-1 grid-cols-2 gap-3">
+          <StatTile
+            icon={<ListChecks className="size-4" aria-hidden />}
+            label="questions répondues"
+            value={attempts.length.toLocaleString("fr-FR")}
+          />
+          <StatTile
+            icon={<CircleCheck className="size-4" aria-hidden />}
+            label="bonnes réponses"
+            value={precision === null ? "—" : `${precision} %`}
+          />
+          <StatTile icon={<Flame className="size-4" aria-hidden />} label="série de jours" value={days} />
+          <StatTile icon={<Timer className="size-4" aria-hidden />} label="temps médian" value={formatSeconds(medianTime)} />
+        </div>
       </div>
+      {!attempts.length && (
+        <p className="text-sm text-muted">Réponds à ta première question : tes chiffres apparaîtront ici.</p>
+      )}
+    </EspaceSection>
+  );
+}
+
+// Courses to review -------------------------------------------------------------------------------
+
+/** Lessons answered at least twice, lowest accuracy first. */
+function ToReview({ year, attempts }: { year: EspaceYear; attempts: Attempt[] }) {
+  const rows = useMemo(() => {
+    const info = new Map(
+      year.certifs.flatMap((certif) => certif.lessons.map((lesson) => [lesson.id, { lesson, certif }] as const)),
+    );
+    const byLesson = new Map<string, Attempt[]>();
+    for (const item of attempts) byLesson.set(item.lessonId, [...(byLesson.get(item.lessonId) ?? []), item]);
+    return [...byLesson.entries()]
+      .filter(([id, items]) => info.has(id) && items.length >= 2)
+      .map(([id, items]) => ({
+        ...info.get(id)!,
+        answered: items.length,
+        percent: Math.round((items.filter((item) => item.correct).length / items.length) * 100),
+      }))
+      .sort((a, b) => a.percent - b.percent || b.answered - a.answered)
+      .slice(0, 6);
+  }, [year, attempts]);
+
+  return (
+    <EspaceSection id="a-revoir" title="Cours à revoir" description="Là où tu te trompes le plus, en premier.">
+      {rows.length === 0 ? (
+        <EmptyState>Réponds à quelques questions : les cours qui te résistent apparaîtront ici.</EmptyState>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {rows.map(({ lesson, certif, answered, percent }) => (
+            <li key={lesson.id}>
+              <Link
+                href={lessonHref(year, lesson.id)}
+                className="flex min-h-14 items-center gap-4 rounded-card border border-border bg-surface px-4 py-3 transition-shadow duration-200 hover:shadow-glow focus-visible:shadow-glow focus-visible:outline-none"
+              >
+                <span
+                  className={cn(
+                    "numeral w-16 shrink-0 rounded-control py-1 text-center text-lg font-semibold",
+                    percent < 50 ? "bg-wrong-soft text-wrong" : percent < 75 ? "bg-highyield-soft text-highyield" : "bg-correct-soft text-correct",
+                  )}
+                >
+                  {percent} %
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="line-clamp-2 font-medium leading-snug">{lesson.title}</span>
+                  <span className="block truncate text-sm text-muted">
+                    {shortCertifTitle(certif.title)} · {answered} réponses
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </EspaceSection>
   );
 }

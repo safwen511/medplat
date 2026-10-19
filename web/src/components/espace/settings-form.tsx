@@ -8,7 +8,6 @@ import { useId, useState, type FormEvent, type ReactNode } from "react";
 import { useMounted } from "@/components/layout/use-mounted";
 import { announceProfile } from "@/components/layout/use-profile";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import type { Profile } from "@/lib/progress/store";
 import { cn } from "@/lib/utils";
 
@@ -108,7 +107,7 @@ export function SettingsForm({
 
   return (
     <EspaceSection id="reglages" title="Réglages">
-      <Card className="p-5 shadow-none sm:p-6">
+      <div>
         <form onSubmit={submit} onChange={touch} className="flex flex-col gap-6">
           <label className="flex flex-col gap-2 text-[0.9375rem] font-medium">
             Nom affiché
@@ -219,7 +218,7 @@ export function SettingsForm({
             </p>
           </div>
         </form>
-      </Card>
+      </div>
     </EspaceSection>
   );
 }

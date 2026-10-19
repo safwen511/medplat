@@ -3,6 +3,7 @@
 // Usage: node scripts/screens.mjs <out-dir> <member: ala|salsabil|owner> <route> [<route> ...]
 // Special routes: "welcome" shoots every welcome slide and finishes it; "revisit" starts a new
 // browser session (visit counter +1) and shoots the year home with its "Bon retour" banner.
+// "seed" fills this browser's local progress with sample answers and statuses (screenshots only).
 // "<route>#flip" taps the first card (folder or course) of the page and shoots it flipped.
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -45,6 +46,31 @@ try {
         }
         await Promise.all([page.waitForURL(/\/sfax\//), page.getByRole("button", { name: "Commencer" }).click()]);
         await page.waitForLoadState("networkidle");
+        continue;
+      }
+      if (route === "seed") {
+        const year = { ala: "dcem2", salsabil: "dcem1", owner: "dcem1" }[who];
+        const index = JSON.parse(readFileSync(path.join(import.meta.dirname, "..", "content", "sfax", year, "index.json"), "utf-8"));
+        const ready = index.certifs.flatMap((c) => c.modules.flatMap((m) => m.lessons)).filter((l) => l.available);
+        const now = Date.now();
+        const attempts = [];
+        ready.forEach((lesson, i) => {
+          const n = 4 + ((i * 3) % 7);
+          for (let k = 0; k < n; k++)
+            attempts.push({
+              questionId: `${lesson.id}-q${k}`, questionType: "qcm", lessonId: lesson.id, faculty: "sfax", year,
+              mode: "quiz", correct: (k * 7 + i * 5) % 10 < 4 + i, response: null, timeMs: 9000 + ((k * 4111) % 30000),
+              hintsUsed: 0, createdAt: new Date(now - ((k + i) % 4) * 86400000).toISOString(),
+            });
+        });
+        const statuses = ["lu", "revise_1", "maitrise", "revise_2"];
+        const progress = Object.fromEntries(
+          ready.slice(0, 4).map((lesson, i) => [lesson.id, { lessonId: lesson.id, status: statuses[i], revisions: i, updatedAt: new Date(now).toISOString() }]),
+        );
+        await page.evaluate(([a, p]) => {
+          localStorage.setItem("medplat:v1:attempts", JSON.stringify(a));
+          localStorage.setItem("medplat:v1:lessonProgress", JSON.stringify(p));
+        }, [attempts, progress]);
         continue;
       }
       if (route === "revisit") {
