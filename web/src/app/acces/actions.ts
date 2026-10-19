@@ -7,11 +7,14 @@ import {
   ACCESS_COOKIE,
   ACCESS_MAX_AGE,
   findMember,
+  hasReadWelcome,
   SESSION_COOKIE,
   signMember,
   verifyMember,
   VISITS_COOKIE,
   WELCOMED_COOKIE,
+  withVisit,
+  withWelcomeRead,
 } from "@/lib/access";
 
 export interface RedeemState {
@@ -38,18 +41,20 @@ export async function redeemCode(_previous: RedeemState, form: FormData): Promis
   store.set(ACCESS_COOKIE, await signMember(member), cookieOptions(ACCESS_MAX_AGE));
   // The proxy ran before the cookie existed: count this visit here.
   if (!store.get(SESSION_COOKIE)) {
-    store.set(VISITS_COOKIE, String((Number(store.get(VISITS_COOKIE)?.value) || 0) + 1), cookieOptions(ACCESS_MAX_AGE));
+    store.set(VISITS_COOKIE, withVisit(store.get(VISITS_COOKIE)?.value, member.id), cookieOptions(ACCESS_MAX_AGE));
     store.set(SESSION_COOKIE, "1", { ...cookieOptions(0), maxAge: undefined });
   }
   const next = safeNext(String(form.get("suite") ?? ""));
-  if (store.get(WELCOMED_COOKIE)?.value === "1") redirect(next || `/sfax/${member.year}`);
+  if (hasReadWelcome(store.get(WELCOMED_COOKIE)?.value, member.id)) redirect(next || `/sfax/${member.year}`);
   redirect(next ? `/bienvenue?suite=${encodeURIComponent(next)}` : "/bienvenue");
 }
 
-/** The welcome was read: remember it on this device. */
+/** The welcome was read: remember it for this member on this device. */
 export async function finishWelcome(): Promise<void> {
   const store = await cookies();
-  if (await verifyMember(store.get(ACCESS_COOKIE)?.value)) store.set(WELCOMED_COOKIE, "1", cookieOptions(ACCESS_MAX_AGE));
+  const member = await verifyMember(store.get(ACCESS_COOKIE)?.value);
+  if (member)
+    store.set(WELCOMED_COOKIE, withWelcomeRead(store.get(WELCOMED_COOKIE)?.value, member.id), cookieOptions(ACCESS_MAX_AGE));
 }
 
 /** Signs out on this device; it still remembers the welcome was read and the visit count. */

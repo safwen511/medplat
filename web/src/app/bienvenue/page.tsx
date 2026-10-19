@@ -46,7 +46,7 @@ async function WelcomeForSession({ searchParams }: { searchParams: PageProps<"/b
   };
   return (
     <WelcomeSlides
-      member={{ firstName: member.firstName, gender: member.gender, year: member.year, role: member.role }}
+      member={{ id: member.id, firstName: member.firstName, gender: member.gender, year: member.year, role: member.role }}
       stats={stats}
       next={next}
     />

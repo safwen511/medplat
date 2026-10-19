@@ -5,10 +5,12 @@ import {
   ACCESS_COOKIE,
   ACCESS_MAX_AGE,
   accessEnabled,
+  hasReadWelcome,
   SESSION_COOKIE,
   verifyMember,
   VISITS_COOKIE,
   WELCOMED_COOKIE,
+  withVisit,
 } from "@/lib/access";
 import { supabaseAnonKey, supabaseEnabled, supabaseUrl } from "@/lib/supabase/config";
 
@@ -29,16 +31,16 @@ export async function proxy(request: NextRequest) {
     if (member) {
       // A known tester never sees the code page again: straight to the welcome or their year.
       if (PUBLIC.has(pathname)) {
-        const welcomed = request.cookies.get(WELCOMED_COOKIE)?.value === "1";
+        const welcomed = hasReadWelcome(request.cookies.get(WELCOMED_COOKIE)?.value, member.id);
         return NextResponse.redirect(new URL(welcomed ? `/sfax/${member.year}` : "/bienvenue", request.url));
       }
       // One visit per browser session.
       if (!request.cookies.get(SESSION_COOKIE)) {
-        const visits = (Number(request.cookies.get(VISITS_COOKIE)?.value) || 0) + 1;
-        request.cookies.set(VISITS_COOKIE, String(visits));
+        const visits = withVisit(request.cookies.get(VISITS_COOKIE)?.value, member.id);
+        request.cookies.set(VISITS_COOKIE, visits);
         request.cookies.set(SESSION_COOKIE, "1");
         visitCookies = [
-          [VISITS_COOKIE, String(visits), ACCESS_MAX_AGE],
+          [VISITS_COOKIE, visits, ACCESS_MAX_AGE],
           [SESSION_COOKIE, "1", undefined],
         ];
       }

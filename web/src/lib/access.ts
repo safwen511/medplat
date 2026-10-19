@@ -19,10 +19,40 @@ interface Entry extends Member {
 
 export const ACCESS_COOKIE = "medplat_access";
 export const ACCESS_MAX_AGE = 60 * 60 * 24 * 120; // 120 days
-/** Visits (browser sessions) of the member on this device, and whether the welcome was completed. */
+/**
+ * Per member on this device (several testers can share one tablet): visits (browser sessions) and
+ * whether the welcome was read. Values hold member ids: "ala-arfa.3~owner.12", "ala-arfa~owner".
+ */
 export const VISITS_COOKIE = "medplat_visits";
 export const SESSION_COOKIE = "medplat_live"; // session cookie: present while the browser stays open
 export const WELCOMED_COOKIE = "medplat_welcomed";
+
+const entriesOf = (value: string | undefined) => (value ? value.split("~").filter(Boolean) : []);
+
+/** Whether this member has read the welcome on this device. */
+export function hasReadWelcome(cookie: string | undefined, memberId: string): boolean {
+  return entriesOf(cookie).includes(memberId);
+}
+
+/** The welcome cookie with this member added. */
+export function withWelcomeRead(cookie: string | undefined, memberId: string): string {
+  return [...new Set([...entriesOf(cookie), memberId])].join("~");
+}
+
+/** This member's visit count on this device. */
+export function visitsOf(cookie: string | undefined, memberId: string): number {
+  for (const entry of entriesOf(cookie)) {
+    const [id, count] = entry.split(".");
+    if (id === memberId) return Number(count) || 0;
+  }
+  return 0;
+}
+
+/** The visits cookie with one more visit for this member. */
+export function withVisit(cookie: string | undefined, memberId: string): string {
+  const others = entriesOf(cookie).filter((entry) => entry.includes(".") && entry.split(".")[0] !== memberId);
+  return [...others, `${memberId}.${visitsOf(cookie, memberId) + 1}`].join("~");
+}
 
 const encoder = new TextEncoder();
 

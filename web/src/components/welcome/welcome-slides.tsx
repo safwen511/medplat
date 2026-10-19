@@ -18,11 +18,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { finishWelcome, leave } from "@/app/acces/actions";
+import { PROFILE_OWNER_KEY } from "@/components/welcome/member-profile-sync";
 import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/stat-tile";
 import { useProgress } from "@/lib/progress/provider";
 
 export interface WelcomeMember {
+  id: string;
   firstName: string;
   gender: "m" | "f";
   year: "dcem1" | "dcem2";
@@ -254,7 +256,16 @@ export function WelcomeSlides({ member, stats, next }: { member: WelcomeMember; 
 
   const start = async (year: WelcomeMember["year"] = member.year) => {
     setPending(true);
-    const current = await store.profile();
+    // The profile lives in this browser: when another tester takes over the device, their name,
+    // exam date and goal replace the previous person's.
+    let sameOwner = false;
+    try {
+      sameOwner = window.localStorage.getItem(PROFILE_OWNER_KEY) === member.id;
+      window.localStorage.setItem(PROFILE_OWNER_KEY, member.id);
+    } catch {
+      // storage blocked: the profile below is still saved through the store
+    }
+    const current = sameOwner ? await store.profile() : null;
     await store.saveProfile({
       displayName: current?.displayName || member.firstName,
       faculty: "sfax",
