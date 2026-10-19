@@ -28,6 +28,8 @@ const browser = await chromium.launch({ args: process.env.CHROMIUM_ARGS?.split(/
 try {
   for (const [size, viewport] of Object.entries(SIZES)) {
     const context = await browser.newContext({ viewport, colorScheme: "dark", locale: "fr-FR" });
+    // THEME=light: shoot the light theme (next-themes reads localStorage "theme").
+    if (process.env.THEME) await context.addInitScript((theme) => localStorage.setItem("theme", theme), process.env.THEME);
     const page = await context.newPage();
     if (code) {
       await page.goto(`${BASE}/acces`);
@@ -44,7 +46,7 @@ try {
         window.scrollTo(0, 0);
       });
       await page.waitForTimeout(700);
-      const name = `${who}-${size}-${label}.png`;
+      const name = `${who}-${size}-${label}${process.env.THEME ? `-${process.env.THEME}` : ""}.png`;
       await page.screenshot({ path: path.join(outDir, name), fullPage: true });
       console.log(name);
     };

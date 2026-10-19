@@ -142,7 +142,7 @@ export function SiteHeader() {
               >
                 <UserAvatar user={user} name={name} />
               </Link>
-            ) : (
+            ) : pathname.startsWith("/acces") ? null : (
               <Link
                 href="/acces"
                 className={cn(

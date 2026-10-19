@@ -31,7 +31,15 @@ export function ProgressRing({
       className={cn("relative inline-flex shrink-0 items-center justify-center", className)}
       style={{ width: size, height: size }}
     >
-      <svg width={size} height={size} className="-rotate-90" aria-hidden>
+      {/* The glow is a CSS filter on the whole <svg>: on the circle, the SVG filter region (its
+          bounding box, stroke excluded) clipped the glow into a square. */}
+      <svg
+        width={size}
+        height={size}
+        className="-rotate-90 overflow-visible"
+        style={{ filter: `drop-shadow(0 0 6px color-mix(in srgb, ${color} 55%, transparent))` }}
+        aria-hidden
+      >
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -50,10 +58,7 @@ export function ProgressRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - clamped / 100)}
-          style={{
-            transition: "stroke-dashoffset var(--dur-slow) var(--ease-out)",
-            filter: `drop-shadow(0 0 6px ${color})`,
-          }}
+          style={{ transition: "stroke-dashoffset var(--dur-slow) var(--ease-out)" }}
         />
       </svg>
       <span className="numeral absolute text-2xl font-semibold">

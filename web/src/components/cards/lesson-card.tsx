@@ -204,14 +204,14 @@ export function LessonCard({
                   <dl className="flex flex-col text-[11px]">
                     <Row label="Précision" value={stats.precision === null ? "—" : `${stats.precision} %`} />
                     <Row label="Questions répondues" value={String(stats.answered)} />
-                    <Row label="Temps moyen" value={stats.meanTime} />
-                    <Row label="Dernière révision" value={stats.lastReview} />
+                    <Row label="Temps moyen" value={stats.meanTime} className="max-sm:hidden" />
+                    <Row label="Dernière révision" value={stats.lastReview} className="max-sm:hidden" />
                     <Row
                       label="Examens passés"
                       value={String(lesson.pastExamCount)}
                       emphasis={highYield ? "highyield" : undefined}
                     />
-                    <Row label="Exercices disponibles" value={String(lesson.exerciseCount)} />
+                    <Row label="Exercices disponibles" value={String(lesson.exerciseCount)} className="max-sm:hidden" />
                   </dl>
                   <TierStepper
                     tier={tier}
@@ -255,9 +255,25 @@ export function LessonCard({
   );
 }
 
-function Row({ label, value, emphasis }: { label: string; value: string; emphasis?: "highyield" }) {
+function Row({
+  label,
+  value,
+  emphasis,
+  className,
+}: {
+  label: string;
+  value: string;
+  emphasis?: "highyield";
+  /** Narrow phone cards hide the secondary rows so the actions stay in view. */
+  className?: string;
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-2 border-b border-dashed border-border py-[2px] leading-tight last:border-b-0">
+    <div
+      className={cn(
+        "flex items-baseline justify-between gap-2 border-b border-dashed border-border py-[2px] leading-tight last:border-b-0",
+        className,
+      )}
+    >
       <dt className="truncate text-muted">{label}</dt>
       <dd
         className={cn(
