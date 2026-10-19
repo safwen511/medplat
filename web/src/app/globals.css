@@ -205,11 +205,21 @@ body {
   .rise-in {
     animation: rise-in 520ms var(--ease-out) backwards;
   }
+  /* Decorative photos settle in with a slow zoom and fade. */
+  .settle-in {
+    animation: settle-in 1600ms var(--ease-out) backwards;
+  }
 }
 
 @keyframes sheen {
   to {
     transform: translateX(100%);
+  }
+}
+@keyframes settle-in {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
   }
 }
 @keyframes rise-in {

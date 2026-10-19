@@ -32,10 +32,9 @@ they name. Paid runs need the owner's explicit go.
 ## Deploy
 - Vercel project `medplat`, live at https://medplat-bay.vercel.app (production).
 - Deployed as a prebuilt upload from `web/` because content and figures are not in Git:
-  `vercel pull --yes --environment=production`, `vercel build --prod`,
-  `vercel deploy --prebuilt --prod --archive=tgz` (the free plan refuses >5000 file uploads/day).
-- This network's IPv6 is broken: prefix Node/Vercel commands with
-  `NODE_OPTIONS=--dns-result-order=ipv4first`.
+  `web/scripts/deploy.sh --prod` (or without `--prod` for a private preview). It forces IPv4
+  (this network's IPv6 is broken), uploads one archive (the free plan refuses >5000 file
+  uploads/day) and leaves the figures out while `NEXT_PUBLIC_SHOW_FIGURES` is not `true`.
 - Secrets in Vercel env: `MEDPLAT_VIP`, `MEDPLAT_ACCESS_SECRET` (preview + production).
 
 ## Testers

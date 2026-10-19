@@ -1,4 +1,5 @@
-// Screenshots of the running site at tablet (1024x768) and phone (390x844), signed in with a beta
+// Screenshots of the running site at desktop (1440), tablet (1024x768), phone portrait (390x844)
+// and phone landscape (844x390), signed in with a beta
 // access code read from the repo-root "vip" file (never stored in this script).
 // Usage: node scripts/screens.mjs <out-dir> <member: ala|salsabil|owner> <route> [<route> ...]
 // Special routes: "welcome" shoots every welcome slide and finishes it; "revisit" starts a new
@@ -22,7 +23,16 @@ const line = who === "guest" ? null : vip.find((entry) => entry.startsWith(NAMES
 if (who !== "guest" && !line) throw new Error(`no code for ${who}`);
 const code = line?.split(" · ").at(-1).trim();
 
-const SIZES = { tablet: { width: 1024, height: 768 }, phone: { width: 390, height: 844 } };
+const ALL_SIZES = {
+  desktop: { width: 1440, height: 900 },
+  tablet: { width: 1024, height: 768 },
+  phone: { width: 390, height: 844 },
+  landscape: { width: 844, height: 390 },
+};
+// SIZES=desktop,phone limits the run; default: all four.
+const SIZES = Object.fromEntries(
+  Object.entries(ALL_SIZES).filter(([name]) => !process.env.SIZES || process.env.SIZES.split(",").includes(name)),
+);
 // CHROMIUM_ARGS: extra flags, e.g. --host-resolver-rules to force IPv4 on a network whose IPv6 is broken.
 const browser = await chromium.launch({ args: process.env.CHROMIUM_ARGS?.split(/\s+(?=--)/).filter(Boolean) ?? [] });
 try {

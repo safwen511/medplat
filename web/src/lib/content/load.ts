@@ -3,7 +3,9 @@ import "server-only";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import type { ExerciseSet, Lesson, YearIndex } from "./types";
+import { SHOW_FIGURES } from "@/lib/flags";
+
+import type { ExerciseSet, Lesson, SourceRef, YearIndex } from "./types";
 
 const ROOT = path.join(process.cwd(), "content");
 
@@ -26,12 +28,33 @@ export function yearIndex(faculty: string, year: string): YearIndex | null {
   return readJson<YearIndex>(faculty, year, "index.json");
 }
 
+const ROLE_TITLES: Record<string, string> = {
+  official_slides: "Diapositives officielles",
+  official_polycopie: "Polycopié officiel",
+  student_summary: "Résumé étudiant",
+  tips: "Astuces",
+  tutorial: "Tutoriel",
+  reference_book: "Ouvrage de référence",
+};
+
+/**
+ * Source labels name their authors (teachers, students, sometimes in the file title): they never
+ * leave the server. The page only gets the source's kind.
+ */
+function anonymous(source: SourceRef): SourceRef {
+  return { ...source, label: ROLE_TITLES[source.role] ?? "Document du cours" };
+}
+
 export function lesson(faculty: string, year: string, lessonId: string): Lesson | null {
-  return readJson<Lesson>(faculty, year, "lessons", `${lessonId}.json`);
+  const data = readJson<Lesson>(faculty, year, "lessons", `${lessonId}.json`);
+  if (!data) return null;
+  return { ...data, sources: data.sources.map(anonymous), figures: SHOW_FIGURES ? data.figures : [] };
 }
 
 export function exercises(faculty: string, year: string, lessonId: string): ExerciseSet | null {
-  return readJson<ExerciseSet>(faculty, year, "exercises", `${lessonId}.json`);
+  const data = readJson<ExerciseSet>(faculty, year, "exercises", `${lessonId}.json`);
+  if (!data || SHOW_FIGURES) return data;
+  return { ...data, items: data.items.filter((item) => item.type !== "image") };
 }
 
 export function availableLessonIds(faculty: string, year: string): string[] {

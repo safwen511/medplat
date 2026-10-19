@@ -12,7 +12,6 @@ import {
   formatLocator,
   parseCitation,
   remarkCitations,
-  ROLE_LABELS,
   STUDENT_ROLES,
 } from "./citations";
 import type { LabeledFigure } from "./figures";
@@ -29,8 +28,9 @@ export function resolveCitation(
     const source = lesson.sources.find((item) => item.key === ref.source);
     return {
       source: ref.source,
+      // The loader already reduced the label to the source's kind (no author names).
       label: source?.label ?? "Source non répertoriée",
-      role: source ? (ROLE_LABELS[source.role] ?? null) : null,
+      role: null,
       student: source ? STUDENT_ROLES.has(source.role) : false,
       locator: formatLocator(ref),
       short: ref.text.replace(/^S\d+\s*,?\s*/, ""),

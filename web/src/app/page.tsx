@@ -5,6 +5,8 @@ import type { CSSProperties, ReactNode } from "react";
 import { CountUp } from "@/components/landing/count-up";
 import { CitationDemo, ProgressDemo, QuizDemo } from "@/components/landing/demos";
 import { HeroDeck } from "@/components/landing/hero-deck";
+import { ParallaxPhoto } from "@/components/landing/photo";
+import { LogoMark } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
 import { availableYears, yearIndex } from "@/lib/content/load";
@@ -86,8 +88,17 @@ export default function Home() {
             Bêta privée, sur invitation · gratuite
           </p>
         </div>
-        <div className="rise-in" style={delay(180)}>
-          <HeroDeck />
+        <div className="relative" style={delay(180)}>
+          <ParallaxPhoto
+            src="/landing/stethoscope.webp"
+            sizes="(min-width: 1024px) 40vw, 90vw"
+            priority
+            drift={40}
+            className="landing-photo absolute inset-x-[6%] -top-4 -bottom-2 rounded-[28px] border border-border [mask-image:linear-gradient(to_bottom,black_55%,transparent)] sm:inset-x-[12%] lg:inset-x-[4%]"
+          />
+          <div className="rise-in relative">
+            <HeroDeck />
+          </div>
         </div>
       </section>
 
@@ -97,7 +108,7 @@ export default function Home() {
       >
         {[
           { value: stats.lessons, label: "cours reconstruits" },
-          { value: stats.exercises, label: "exercices corrigés" },
+          { value: stats.exercises, label: "exercices avec correction" },
           { value: stats.certifs, label: "certifs couverts" },
           { value: stats.years, label: "années d'études" },
         ].map((item) => (
@@ -123,28 +134,68 @@ export default function Home() {
         </Feature>
       </section>
 
-      <section aria-label="Pensé pour réviser" className="grid gap-4 pb-20 sm:grid-cols-3">
-        {[
-          {
-            icon: PenLine,
-            title: "Tablette et stylet",
-            text: "Survole une carte au stylet pour la voir bouger, touche-la pour la retourner.",
-          },
-          { icon: Moon, title: "Des heures sans fatigue", text: "Thème sombre ou clair, lecture large et calme." },
-          {
-            icon: WifiOff,
-            title: "Ta progression chez toi",
-            text: "Pendant la bêta, tout reste sur ton appareil. Rien à installer.",
-          },
-        ].map((item, index) => (
-          <Reveal key={item.title} delay={index * 0.08}>
-            <div className="h-full rounded-panel border border-border p-6 transition-colors duration-200 hover:border-border-strong hover:bg-surface">
-              <item.icon className="size-5 text-primary" strokeWidth={1.6} aria-hidden />
-              <p className="mt-4 font-heading text-lg font-semibold">{item.title}</p>
-              <p className="mt-1 text-muted">{item.text}</p>
-            </div>
+      <section
+        aria-labelledby="tablette"
+        className="relative mx-[calc(50%-50vw)] mb-20 overflow-hidden py-24 sm:py-32 lg:py-40"
+      >
+        <ParallaxPhoto
+          src="/landing/desk.webp"
+          sizes="100vw"
+          drift={90}
+          className="absolute inset-0 hidden [mask-image:linear-gradient(to_bottom,transparent,black_22%,black_78%,transparent)] sm:block"
+          imageClassName="object-[75%_50%]"
+        />
+        <ParallaxPhoto
+          src="/landing/desk-tall.webp"
+          sizes="100vw"
+          drift={60}
+          className="absolute inset-0 [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)] sm:hidden"
+          imageClassName="object-[70%_50%]"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/5 max-sm:hidden"
+        />
+        <div aria-hidden className="absolute inset-0 bg-background/75 sm:hidden" />
+        <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 sm:px-6">
+          <Reveal className="flex max-w-xl flex-col gap-4">
+            <p className="eyebrow">04 · Pensé pour réviser</p>
+            <h2 id="tablette" className="text-3xl leading-tight sm:text-[2.75rem]">
+              Ta tablette, ton stylet, tes surligneurs.
+            </h2>
+            <p className="text-lg leading-relaxed text-muted">
+              MedPlat a été dessiné pour la façon dont tu révises vraiment : sur une tablette, un stylet à la
+              main, des heures d&apos;affilée.
+            </p>
           </Reveal>
-        ))}
+          <ul className="grid max-w-xl gap-3">
+            {[
+              {
+                icon: PenLine,
+                title: "Tablette et stylet",
+                text: "Survole une carte au stylet pour la voir bouger, touche-la pour la retourner.",
+              },
+              { icon: Moon, title: "Des heures sans fatigue", text: "Thème sombre ou clair, lecture large et calme." },
+              {
+                icon: WifiOff,
+                title: "Ta progression chez toi",
+                text: "Pendant la bêta, tout reste sur ton appareil. Rien à installer.",
+              },
+            ].map((item, index) => (
+              <li key={item.title}>
+                <Reveal delay={0.1 + index * 0.08}>
+                  <div className="flex items-start gap-4 rounded-panel border border-border bg-background/60 p-5 backdrop-blur-md transition-colors duration-200 hover:border-border-strong">
+                    <item.icon className="mt-0.5 size-5 shrink-0 text-primary" strokeWidth={1.6} aria-hidden />
+                    <span className="flex flex-col gap-0.5">
+                      <span className="font-heading font-semibold">{item.title}</span>
+                      <span className="text-muted">{item.text}</span>
+                    </span>
+                  </div>
+                </Reveal>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       <Reveal>
@@ -165,6 +216,13 @@ export default function Home() {
           </div>
         </section>
       </Reveal>
+
+      <footer className="flex flex-col items-start justify-between gap-3 border-t border-border py-8 text-sm text-muted sm:flex-row sm:items-center">
+        <span className="inline-flex items-center gap-2">
+          <LogoMark className="size-5" /> MedPlat
+        </span>
+        <p>MedPlat est un projet bêta, indépendant de la Faculté de Médecine de Sfax.</p>
+      </footer>
     </div>
   );
 }

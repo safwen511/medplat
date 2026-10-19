@@ -10,7 +10,7 @@ import { certifTheme } from "@/components/cards/themes";
 
 import type { Lesson } from "@/lib/content/types";
 
-import { CITATION, ROLE_LABELS, STUDENT_ROLES } from "./citations";
+import { CITATION, STUDENT_ROLES } from "./citations";
 import { FigureGallery } from "./figures";
 import { FoldableSection } from "./foldable-section";
 import { HighlightableBody, HighlightsLink } from "./highlights";
@@ -89,10 +89,9 @@ function SourceList({ lesson }: { lesson: Lesson }) {
             <span className="w-7 shrink-0 text-sm leading-6 text-muted">{source.key}</span>
             <span className="min-w-0">
               <span className="block leading-snug">{source.label}</span>
-              <span className="block text-sm text-muted">
-                {ROLE_LABELS[source.role] ?? source.role}
-                {STUDENT_ROLES.has(source.role) && " · support étudiant, non officiel"}
-              </span>
+              {STUDENT_ROLES.has(source.role) && (
+                <span className="block text-sm text-muted">Support étudiant, non officiel</span>
+              )}
             </span>
           </li>
         ))}
