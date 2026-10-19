@@ -78,6 +78,21 @@ rings (goal, mastery) and progress bars (per certif). Sentences may explain, not
   ("Bêta · gratuit · non relu par un médecin").
 - Empty or missing values say what to do: e.g. no exam date → "Ajoute la date de ton certif".
 
+## Lesson page (reading)
+- Light theme is pure white; text 18px (19px desktop), IBM Plex Sans at 450, leading 1.7,
+  ~70 characters per line. All adjustable in the settings panel (bottom-left), saved per device.
+- Headings: H2 large, bold, accent colour with a left bar; H3 bold ink; H4 small-capitals label.
+- Source chips hidden by default ("Afficher les sources"); tables with a tinted header, zebra
+  rows and a sticky bold first column, sideways scroll with fading edges.
+- The header slides away while reading down; no tab bar; phone landscape chrome ≤ 48px.
+- Outline three ways: "Plan du cours" at the top, a floating "Plan" sheet with scroll spy,
+  and the sticky margin outline on desktop.
+- Tools on the left (pill on phones): three pens, five colours, eraser, "Mes surlignages",
+  "Loupe" (Arabic glossary, docs/glossary.md) and "Mode rappel". Pens act on release with a
+  mouse or stylus; touch confirms with one tap (selection handles).
+- No figures for now (`NEXT_PUBLIC_SHOW_FIGURES`), no author names, protection by deterrence
+  (docs/protection.md).
+
 ## Typography (chosen)
 Display: **Space Grotesk** (titles, numbers, stat tiles). Body: **IBM Plex Sans**.
 Titles balanced, tight tracking (-0.02em, h1 -0.032em); `.eyebrow` labels (display face, spaced

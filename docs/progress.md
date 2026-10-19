@@ -25,6 +25,10 @@ they name. Paid runs need the owner's explicit go.
 - Design: `docs/design.md` (study console, dark first, Space Grotesk + IBM Plex Sans).
 - Done: tokens and panels, home with flipping certif folders, certif pages with course cards,
   Mon espace dashboard, quiz with "Voir le cours" references, welcome slideshow.
+- Lesson reader: reading settings, outline (plan, floating sheet, margin), highlighter with
+  three pens and five colours, Arabic glossary lens, recall mode, questions per part,
+  "À revoir aujourd'hui" (Leitner 1/3/7 days). Figures off, no author names, print/copy
+  deterrence with a masked-code watermark.
 - Beta access: personal codes (repo-root `vip` file and `MEDPLAT_VIP`, never committed), visit
   memory, sign-out, "Bon retour" banner.
 - Progress is stored in the browser (localStorage) until accounts (Supabase) are set up.
