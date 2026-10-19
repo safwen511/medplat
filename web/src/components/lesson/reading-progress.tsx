@@ -10,7 +10,7 @@ export function ReadingProgress() {
     <motion.div
       aria-hidden
       style={{ scaleX }}
-      className="fixed inset-x-0 top-16 z-30 h-0.5 origin-left bg-gradient-to-r from-primary/60 to-primary"
+      className="reading-progress fixed inset-x-0 z-30 h-0.5 origin-left bg-gradient-to-r from-primary/60 to-primary print:hidden"
     />
   );
 }

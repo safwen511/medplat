@@ -7,6 +7,9 @@
 
 /* Hover only where a pointer can really hover: a mouse, or a stylus that hovers above the screen
    (any-hover). Touch-only screens get the same information by tapping. */
+/* Phones held in landscape: the chrome (header, bars) must stay within 48px. */
+@custom-variant short (@media (max-height: 30rem) and (orientation: landscape));
+
 @custom-variant hover {
   @media (any-hover: hover) {
     &:hover {
@@ -55,16 +58,22 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --aurora: radial-gradient(1100px 520px at 50% -12%, rgb(95 211 198 / 0.08), transparent 62%),
     radial-gradient(700px 380px at 92% 4%, rgb(120 140 255 / 0.05), transparent 60%);
+  --header-h: 4rem;
+}
+@media (max-height: 30rem) and (orientation: landscape) {
+  :root {
+    --header-h: 3rem;
+  }
 }
 
 :root.light {
   color-scheme: light;
-  --background: #f5f6f8;
-  --panel: #ffffff;
+  --background: #ffffff;
+  --panel: #f7f8fa;
   --panel-border: rgb(15 23 42 / 0.07);
   --surface: #ffffff;
-  --surface-muted: #eef0f4;
-  --foreground: #0d1422;
+  --surface-muted: #eff1f4;
+  --foreground: #0b1220;
   --muted: #5b6579;
   --subtle: #8a93a6;
   --border: rgb(15 23 42 / 0.09);
@@ -86,8 +95,8 @@
   --shadow-2: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 28px -14px rgb(15 23 42 / 0.16);
   --shadow-3: 0 2px 4px rgb(15 23 42 / 0.04), 0 26px 50px -22px rgb(15 23 42 / 0.24);
   --highlight: inset 0 1px 0 rgb(255 255 255 / 0.9);
-  --aurora: radial-gradient(1100px 520px at 50% -12%, rgb(13 138 126 / 0.07), transparent 62%),
-    radial-gradient(700px 380px at 92% 4%, rgb(90 110 230 / 0.05), transparent 60%);
+  /* Pure white page in light mode (reading comfort). */
+  --aurora: none;
 }
 
 @theme inline {
@@ -153,6 +162,15 @@ body {
 }
 
 @layer components {
+  /* Lesson pages: the header slides away while reading down (see SiteHeader), the progress line
+     follows it. */
+  .reading-progress {
+    top: var(--header-h);
+    transition: translate var(--dur-base) var(--ease-out);
+  }
+  :root[data-chrome="hidden"] .reading-progress {
+    translate: 0 calc(-1 * var(--header-h));
+  }
   /* Level 2: a section panel with its title row. A faint top light gives it depth. */
   .panel {
     background: linear-gradient(180deg, rgb(255 255 255 / 0.022), transparent 120px), var(--panel);
@@ -229,10 +247,100 @@ body {
   }
 }
 
-/* Lesson reading. */
-.lesson-prose {
-  font-size: 1.0625rem;
-  line-height: 1.75;
+@layer components {
+  /* Lesson reading (docs/design.md, "Reading"). Settings (components/lesson/settings) override the
+     custom properties; defaults: 18px on phones and tablets, 19px on desktop, weight 450, leading
+     1.7, about 70 characters per line. */
+  .reader {
+    font-size: var(--reader-size, 18px);
+    max-width: var(--reader-measure, 70ch);
+  }
+  @media (min-width: 1280px) {
+    .reader {
+      font-size: var(--reader-size-xl, 19px);
+    }
+  }
+  .lesson-prose {
+    font-weight: var(--reader-weight, 450);
+    line-height: var(--reader-leading, 1.7);
+    color: var(--foreground);
+  }
+  .lesson-prose strong {
+    font-weight: 640;
+  }
+
+  /* Lesson tables: accent top, tinted header, zebra rows, bold sticky first column. */
+  .lesson-table {
+    --row: var(--surface);
+    --row-alt: color-mix(in srgb, var(--foreground) 3.5%, var(--surface));
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--primary);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+  }
+  .lesson-table table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9em;
+    line-height: 1.5;
+    text-align: left;
+  }
+  .lesson-table thead th {
+    background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+    color: var(--foreground);
+    font-family: var(--font-display), sans-serif;
+    font-weight: 650;
+    font-size: 0.86em;
+    letter-spacing: 0.01em;
+    padding: 0.8rem 1rem;
+    vertical-align: bottom;
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  }
+  .lesson-table th,
+  .lesson-table td {
+    max-width: 22rem;
+  }
+  .lesson-table tbody td {
+    padding: 0.8rem 1rem;
+    vertical-align: top;
+    background: var(--row);
+    border-bottom: 1px solid var(--border);
+  }
+  .lesson-table tbody tr:nth-child(even) td {
+    background: var(--row-alt);
+  }
+  .lesson-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .lesson-table tbody td:first-child {
+    font-weight: 620;
+  }
+  .lesson-table th:first-child,
+  .lesson-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    box-shadow: 1px 0 0 var(--border);
+  }
+  @media (any-hover: hover) {
+    .lesson-table tbody tr:hover td {
+      background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+    }
+  }
+  .table-fade {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2.5rem;
+    opacity: 0;
+    background: linear-gradient(to right, transparent, var(--surface));
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
 }
 
 ::selection {
@@ -246,4 +354,11 @@ body {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Outside the layers on purpose: must beat the chips' own display utilities. Source chips stay in
+   the text (and columns made only of sources in tables) but hide unless "Afficher les sources". */
+.reader[data-sources="off"] [data-citation-chip],
+.reader[data-sources="off"] [data-sources-only] {
+  display: none;
 }

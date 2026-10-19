@@ -15,6 +15,7 @@ import {
   STUDENT_ROLES,
 } from "./citations";
 import type { LabeledFigure } from "./figures";
+import { TableFrame } from "./table-frame";
 
 const remarkPlugins = [remarkGfm, remarkCitations];
 
@@ -94,21 +95,10 @@ function components(lesson: Lesson): Components {
     ),
     hr: () => <hr className="my-12 border-border" />,
     table: (props) => (
-      <div className="my-8 overflow-x-auto rounded-card border border-border [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin]">
-        <table
-          className="w-full min-w-[32rem] border-collapse text-left text-[0.9375rem] leading-normal"
-          {...omitNode(props)}
-        />
-      </div>
+      <TableFrame>
+        <table {...omitNode(props)} />
+      </TableFrame>
     ),
-    thead: (props) => <thead className="bg-surface-muted/70 font-sans text-sm text-muted" {...omitNode(props)} />,
-    tr: (props) => (
-      <tr className="border-b border-border last:border-b-0" {...omitNode(props)} />
-    ),
-    th: (props) => (
-      <th className="px-4 py-2.5 align-bottom font-medium" {...omitNode(props)} />
-    ),
-    td: (props) => <td className="px-4 py-3 align-top" {...omitNode(props)} />,
   };
 }
 

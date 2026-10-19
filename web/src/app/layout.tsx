@@ -12,7 +12,7 @@ import { ProgressProvider } from "@/lib/progress/provider";
 import "./globals.css";
 
 const display = Space_Grotesk({ variable: "--font-display", subsets: ["latin"], weight: ["500", "600", "700"] });
-const body = IBM_Plex_Sans({ variable: "--font-body", subsets: ["latin"], weight: ["400", "500", "600"] });
+const body = IBM_Plex_Sans({ variable: "--font-body", subsets: ["latin"] }); // variable: weights 100–700 (reading text at 450)
 
 export const viewport: Viewport = { viewportFit: "cover" };
 

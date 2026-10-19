@@ -16,14 +16,19 @@ export function SectionHeading({
   return <h4 className={className}>{children}</h4>;
 }
 
+/**
+ * Hierarchy a student can read at a glance: H2 large, bold, in the accent colour with a bar;
+ * H3 medium, bold, in ink; H4 a small-capitals label.
+ */
 export function headingClass(level: number) {
-  if (level <= 2) return "text-[1.625rem] leading-snug text-foreground sm:text-[1.75rem]";
-  if (level === 3) return "text-[1.3125rem] leading-snug text-foreground";
-  return "font-sans text-[1em] font-semibold text-foreground";
+  if (level <= 2)
+    return "border-l-[3px] border-primary pl-4 text-[1.55em] leading-tight font-bold tracking-[-0.02em] text-primary";
+  if (level === 3) return "text-[1.22em] leading-snug font-bold text-foreground";
+  return "font-heading text-[0.8em] font-semibold tracking-[0.12em] text-muted uppercase";
 }
 
 export function sectionSpacing(level: number) {
-  if (level <= 2) return "mt-16 first:mt-8";
+  if (level <= 2) return "mt-20 first:mt-10";
   if (level === 3) return "mt-10";
   return "mt-8";
 }

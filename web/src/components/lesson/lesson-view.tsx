@@ -20,7 +20,9 @@ import { InlineMarkdown, LessonMarkdown, sectionFigures } from "./lesson-markdow
 import { parseLesson, plainTitle, type LessonSection } from "./parse";
 import { ReadingProgress } from "./reading-progress";
 import { headingClass, SectionHeading, sectionSpacing } from "./heading";
-import { MarginToc, TocLink, type TocItem } from "./toc";
+import { ReaderSurface } from "./reader-surface";
+import { SourcesToggle } from "./sources-toggle";
+import { MarginToc, PlanBlock, PlanButton, type TocItem } from "./toc";
 
 const ARTICLE_ID = "lecon";
 
@@ -109,6 +111,15 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
       title: plainTitle(section.title),
       highYield: section.highYield,
       reviewer: section.reviewer,
+      children: section.children
+        .filter((child) => child.level === 3)
+        .map((child) => ({
+          id: child.id,
+          title: plainTitle(child.title),
+          highYield: child.highYield,
+          reviewer: child.reviewer,
+          children: [],
+        })),
     }));
   const sourceCount = lesson.sources.length;
 
@@ -116,7 +127,7 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
     <LessonProvider lessonId={lesson.id} faculty={faculty} year={year}>
       <ReadingProgress />
       {/* The column stays centred; on wide screens the table of contents hangs in the right margin. */}
-      <div className="relative mx-auto w-full max-w-[40rem]">
+      <ReaderSurface className="relative mx-auto w-full">
         <article id={ARTICLE_ID} className="min-w-0">
           <header className="font-sans">
             <Link
@@ -166,14 +177,16 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
             <div className="mt-6 flex flex-col">
               <StatusTracker />
               <div className={linkRow}>
-                <TocLink items={toc} className="xl:hidden" />
                 <HighlightsLink />
+                <SourcesToggle />
                 <ReportErrorButton />
               </div>
             </div>
           </header>
 
-          <HighlightableBody className="lesson-prose mt-10 text-[1.0625rem] sm:text-[1.125rem]">
+          <PlanBlock items={toc} />
+
+          <HighlightableBody className="lesson-prose mt-10">
             <LessonMarkdown markdown={parsed.preface} lesson={lesson} />
             {parsed.sections.map((section) => (
               <SectionBlock key={section.id} section={section} lesson={lesson} />
@@ -197,7 +210,8 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
             <MarginToc items={toc} />
           </div>
         </aside>
-      </div>
+        <PlanButton items={toc} />
+      </ReaderSurface>
     </LessonProvider>
   );
 }

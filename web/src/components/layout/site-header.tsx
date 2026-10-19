@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { signOut } from "@/app/acces/actions";
 import { useProgress } from "@/lib/progress/provider";
@@ -36,6 +36,38 @@ function subscribeHash(callback: () => void) {
 const announceHash = () => setTimeout(() => window.dispatchEvent(new Event(HASH_EVENT)), 0);
 
 const focusRing = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/**
+ * On lesson pages the header slides away while reading down and comes back on scrolling up. The
+ * state is mirrored on <html data-chrome> for the reading progress line.
+ */
+function useHideOnScroll(enabled: boolean): boolean {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    let last = window.scrollY;
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const y = window.scrollY;
+        if (Math.abs(y - last) < 8) return;
+        setHidden(y > last && y > 96);
+        last = y;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [enabled]);
+  const effective = enabled && hidden;
+  useEffect(() => {
+    document.documentElement.dataset.chrome = effective ? "hidden" : "shown";
+  }, [effective]);
+  return effective;
+}
 
 const iconButton = cn(
   "flex size-11 items-center justify-center rounded-full text-muted transition-colors duration-150 hover:bg-surface-muted hover:text-foreground",
@@ -72,11 +104,18 @@ export function SiteHeader() {
   const subLinks = base ? studyLinks(base, pathname, hash) : null;
   const name = displayNameOf(user, profile?.displayName);
   const dark = mounted && resolvedTheme === "dark";
+  const reading = pathname.includes("/lecon/");
+  const hidden = useHideOnScroll(reading);
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-border bg-background/75 backdrop-blur-xl backdrop-saturate-150">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6 lg:gap-6">
+      <header
+        className={cn(
+          "sticky top-0 z-40 border-b border-border bg-background/75 backdrop-blur-xl backdrop-saturate-150 transition-transform duration-200 ease-out print:hidden",
+          hidden && "-translate-y-full",
+        )}
+      >
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 short:h-12 sm:px-6 lg:gap-6">
           <Link href={base ?? "/"} aria-label="MedPlat, accueil" className={cn("-mx-1 rounded-full px-1", focusRing)}>
             <Logo />
           </Link>
@@ -164,7 +203,7 @@ export function SiteHeader() {
         </div>
 
         {subLinks && (
-          <div className="border-t border-border/60">
+          <div className="border-t border-border/60 short:hidden">
             <NavPills
               group="study"
               label="Étudier"
@@ -182,7 +221,8 @@ export function SiteHeader() {
         )}
       </header>
 
-      {showNav && <BottomNav items={items} active={active} />}
+      {/* No tab bar while reading a lesson: the header comes back on scrolling up. */}
+      {showNav && !reading && <BottomNav items={items} active={active} />}
     </>
   );
 }

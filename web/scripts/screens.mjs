@@ -6,6 +6,8 @@
 // browser session (visit counter +1) and shoots the year home with its "Bon retour" banner.
 // "seed" fills this browser's local progress with sample answers and statuses (screenshots only).
 // "quiz" opens the year quiz (QCM only), shoots a question, answers it and shoots the feedback.
+// "<route>#reading" (a lesson): viewport shots of the top, a table while scrolling down (header
+// hidden) and the "Plan" sheet.
 // "<route>#flip" taps the first card (folder or course) of the page and shoots it flipped.
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -121,6 +123,32 @@ try {
         await page.getByText("Bon retour").waitFor({ timeout: 15000 }).catch(() => console.log("no banner"));
         await page.waitForTimeout(400);
         await shoot("revisit");
+        continue;
+      }
+      if (route.endsWith("#reading")) {
+        await page.goto(`${BASE}${route.slice(0, -8)}`, { waitUntil: "networkidle" });
+        await page.waitForTimeout(600);
+        const view = async (label) => {
+          const name = `${who}-${size}-${label}${process.env.THEME ? `-${process.env.THEME}` : ""}.png`;
+          await page.screenshot({ path: path.join(outDir, name) });
+          console.log(name);
+        };
+        await view("lesson-top");
+        const table = page.locator(".lesson-table").first();
+        if (await table.count()) {
+          await table.evaluate((element) => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 220));
+          await page.waitForTimeout(150);
+          await page.mouse.wheel(0, 160);
+          await page.waitForTimeout(700);
+          await view("lesson-table");
+        }
+        const plan = page.getByRole("button", { name: "Plan", exact: true });
+        if (await plan.isVisible()) {
+          await plan.click();
+          await page.waitForTimeout(500);
+          await view("lesson-plan");
+          await page.keyboard.press("Escape");
+        }
         continue;
       }
       if (route.endsWith("#flip")) {
