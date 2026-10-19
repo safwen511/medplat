@@ -1,6 +1,6 @@
 "use client";
 
-import { Check as CheckIcon } from "lucide-react";
+import { Check as CheckIcon, Gamepad2, PlayCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -10,6 +10,7 @@ import type { Exercise, YearIndex } from "@/lib/content/types";
 import { useProgress } from "@/lib/progress/provider";
 import { cn, shuffle } from "@/lib/utils";
 
+import { CourseLinksProvider } from "./course-ref";
 import { Game, GAMES, type GameKind } from "./games";
 import { randomSeed, TYPE_LABELS } from "./grading";
 import { QuestionPlayer } from "./question-player";
@@ -31,10 +32,27 @@ interface LessonInfo {
 
 /** Quiz setup; reads ?certif=<slug> to preselect a certificate (hence its own Suspense boundary). */
 export function QuizSetup(props: { index: YearIndex; pool: Exercise[] }) {
+  const { index } = props;
+  const links = useMemo(
+    () =>
+      Object.fromEntries(
+        index.certifs.flatMap((certif) =>
+          certif.modules.flatMap((mod) =>
+            mod.lessons.map((lesson) => [
+              lesson.id,
+              { title: lesson.title, href: `/${index.faculty}/${index.year}/lecon/${encodeURIComponent(lesson.id)}` },
+            ]),
+          ),
+        ),
+      ),
+    [index],
+  );
   return (
-    <Suspense fallback={null}>
-      <QuizSetupInner {...props} />
-    </Suspense>
+    <CourseLinksProvider links={links}>
+      <Suspense fallback={null}>
+        <QuizSetupInner {...props} />
+      </Suspense>
+    </CourseLinksProvider>
   );
 }
 
@@ -123,7 +141,7 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
 
   if (view.kind === "quiz") {
     return (
-      <div ref={rootRef} className="mx-auto w-full max-w-[40rem] scroll-mt-20">
+      <div ref={rootRef} className="panel mx-auto w-full max-w-[44rem] scroll-mt-20">
         <QuestionPlayer
           key={view.key}
           exercises={view.items}
@@ -139,7 +157,7 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
 
   if (view.kind === "game") {
     return (
-      <div ref={rootRef} className="mx-auto w-full max-w-[40rem] scroll-mt-20">
+      <div ref={rootRef} className="panel mx-auto w-full max-w-[44rem] scroll-mt-20">
         <Game
           key={view.key}
           kind={view.game}
@@ -157,10 +175,14 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
   const visibleTypes = TYPE_ORDER.filter((type) => pool.some((exercise) => exercise.type === type));
 
   return (
-    <div ref={rootRef} className="mx-auto flex w-full max-w-[40rem] scroll-mt-20 flex-col gap-12">
+    <div ref={rootRef} className="mx-auto flex w-full max-w-[48rem] scroll-mt-20 flex-col gap-12 sm:gap-16">
+      <section aria-labelledby="quiz-titre" className="panel flex flex-col gap-10">
       <header className="flex flex-col gap-2">
         <p className="text-sm text-muted">{index.yearLabel}</p>
-        <h1 className="text-3xl">Quiz</h1>
+        <h1 id="quiz-titre" className="text-3xl sm:text-4xl">
+          Quiz
+        </h1>
+        <p className="text-muted">Compose ta série, puis lance-la.</p>
       </header>
 
       <div className="flex flex-col gap-10">
@@ -276,22 +298,33 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
         </Field>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row-reverse sm:items-center sm:justify-between">
-        <Button size="lg" onClick={launch} disabled={filtered.length === 0} className="w-full sm:w-auto sm:min-w-40">
-          Lancer
+      <div className="flex flex-col gap-4 rounded-card border border-border bg-surface p-4 sm:flex-row-reverse sm:items-center sm:justify-between">
+        <Button size="lg" onClick={launch} disabled={filtered.length === 0} className="w-full shadow-glow sm:w-auto sm:min-w-40">
+          <PlayCircle aria-hidden /> Lancer
         </Button>
-        <p className="text-base text-muted" aria-live="polite">
-          {filtered.length === 0
-            ? "Aucune question ne correspond à ces choix."
-            : `${planned} question${planned > 1 ? "s" : ""} sur ${filtered.length} disponible${filtered.length > 1 ? "s" : ""}.`}
+        <p className="flex items-baseline gap-2 text-muted" aria-live="polite">
+          {filtered.length === 0 ? (
+            "Aucune question ne correspond à ces choix."
+          ) : (
+            <>
+              <span className="numeral text-3xl font-semibold text-foreground">{planned}</span>
+              <span>
+                question{planned > 1 ? "s" : ""} · {filtered.length} disponible{filtered.length > 1 ? "s" : ""}
+              </span>
+            </>
+          )}
         </p>
       </div>
+      </section>
 
-      <section id="mini-jeux" aria-labelledby="mini-jeux-titre" className="flex scroll-mt-24 flex-col gap-3 pt-4">
-        <h2 id="mini-jeux-titre" className="text-xl">
-          Mini-jeux
-        </h2>
-        <ul className="flex flex-col">
+      <section id="mini-jeux" aria-labelledby="mini-jeux-titre" className="panel flex scroll-mt-24 flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h2 id="mini-jeux-titre" className="text-xl sm:text-2xl">
+            Mini-jeux
+          </h2>
+          <p className="text-sm text-muted">Des séries courtes et chronométrées sur la même sélection.</p>
+        </div>
+        <ul className="grid gap-3 sm:grid-cols-3">
           {GAMES.map((game) => {
             const available = scoped.filter((exercise) => exercise.type === game.type).length;
             return (
@@ -300,15 +333,16 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
                   <button
                     type="button"
                     onClick={() => open({ kind: "game", game: game.kind, key: randomSeed() })}
-                    className="group flex min-h-12 w-full flex-col items-start rounded-card py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-full min-h-12 w-full flex-col items-start gap-1 rounded-card border border-border bg-surface p-4 text-left transition-shadow duration-200 hover:shadow-glow focus-visible:shadow-glow focus-visible:outline-none"
                   >
-                    <span className="text-base text-primary underline decoration-primary/30 underline-offset-4 group-hover:decoration-current">
+                    <span className="flex items-center gap-2 font-heading text-base font-semibold">
+                      <Gamepad2 className="size-4 text-primary" aria-hidden />
                       {game.title}
                     </span>
                     <span className="text-sm text-muted">{game.description}</span>
                   </button>
                 ) : (
-                  <p className="flex min-h-12 flex-col justify-center py-2">
+                  <p className="flex h-full min-h-12 flex-col gap-1 rounded-card border border-dashed border-border p-4">
                     <span className="text-base text-muted">{game.title}</span>
                     <span className="text-sm text-muted">Pas encore de questions de ce type.</span>
                   </p>

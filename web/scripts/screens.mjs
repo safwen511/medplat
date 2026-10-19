@@ -4,6 +4,7 @@
 // Special routes: "welcome" shoots every welcome slide and finishes it; "revisit" starts a new
 // browser session (visit counter +1) and shoots the year home with its "Bon retour" banner.
 // "seed" fills this browser's local progress with sample answers and statuses (screenshots only).
+// "quiz" opens the year quiz (QCM only), shoots a question, answers it and shoots the feedback.
 // "<route>#flip" taps the first card (folder or course) of the page and shoots it flipped.
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -71,6 +72,20 @@ try {
           localStorage.setItem("medplat:v1:attempts", JSON.stringify(a));
           localStorage.setItem("medplat:v1:lessonProgress", JSON.stringify(p));
         }, [attempts, progress]);
+        continue;
+      }
+      if (route === "quiz") {
+        const year = { ala: "dcem2", salsabil: "dcem1", owner: "dcem1" }[who];
+        await page.goto(`${BASE}/sfax/${year}/quiz`, { waitUntil: "networkidle" });
+        await shoot("quiz-setup");
+        await page.getByRole("button", { name: /^QCM\b/ }).click();
+        await page.getByRole("button", { name: "Lancer" }).click();
+        await page.waitForTimeout(500);
+        await shoot("quiz-question");
+        await page.locator('[aria-label="Propositions"] button').first().click();
+        await page.getByRole("button", { name: "Valider" }).click();
+        await page.waitForTimeout(600);
+        await shoot("quiz-feedback");
         continue;
       }
       if (route === "revisit") {

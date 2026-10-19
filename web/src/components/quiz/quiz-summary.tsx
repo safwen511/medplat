@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 
+import { cleanExplanation, CourseRef } from "./course-ref";
 import { spokenDuration } from "./grading";
 import type { AnswerResult } from "./question-card";
 import { TextAction } from "./quiet";
@@ -60,9 +61,9 @@ export function QuizSummary({
                     </p>
                   )}
                   {exercise.explanation && (
-                    <p className="whitespace-pre-line text-base leading-relaxed text-muted">{exercise.explanation}</p>
+                    <p className="whitespace-pre-line text-base leading-relaxed text-muted">{cleanExplanation(exercise.explanation)}</p>
                   )}
-                  {exercise.citations && <p className="text-sm text-muted">Sources : {exercise.citations}</p>}
+                  <CourseRef lessonId={exercise.lessonId} citations={exercise.citations} />
                 </div>
               </li>
             ))}

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { AnswerInput } from "./answers";
 import { emptyResponse, grade, isAnswerable, responsePayload, spokenDuration, TYPE_LABELS, type Response } from "./grading";
 import { availableHints, HintLink, HintList } from "./hint-ladder";
+import { cleanExplanation, CourseRef } from "./course-ref";
 import { ReportError } from "./report-error";
 
 export interface AnswerResult {
@@ -150,9 +151,9 @@ export function QuestionCard({
             )}
           </p>
           {exercise.explanation && (
-            <p className="whitespace-pre-line text-base leading-relaxed text-foreground">{exercise.explanation}</p>
+            <p className="whitespace-pre-line text-base leading-relaxed text-foreground">{cleanExplanation(exercise.explanation)}</p>
           )}
-          {exercise.citations && <p className="text-sm text-muted">Sources : {exercise.citations}</p>}
+          <CourseRef lessonId={exercise.lessonId} citations={exercise.citations} />
           <ReportError lessonId={exercise.lessonId} questionId={exercise.id} />
         </motion.div>
       ) : null}
