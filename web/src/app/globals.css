@@ -200,23 +200,16 @@ body {
   .grain {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  /* Entrance of a page or a block: opacity only, so fixed children never jump. */
-  .page-enter {
-    animation: fade-in var(--dur-base) var(--ease-out) both;
-  }
+  /* Entrance of a block above the fold (shows before JavaScript loads). Not for ancestors of fixed
+     overlays: an animated element stays a stacking context in Chrome. */
   .rise-in {
-    animation: rise-in 520ms var(--ease-out) both;
+    animation: rise-in 520ms var(--ease-out) backwards;
   }
 }
 
 @keyframes sheen {
   to {
     transform: translateX(100%);
-  }
-}
-@keyframes fade-in {
-  from {
-    opacity: 0;
   }
 }
 @keyframes rise-in {

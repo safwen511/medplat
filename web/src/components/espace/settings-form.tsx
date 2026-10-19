@@ -107,7 +107,7 @@ export function SettingsForm({
 
   return (
     <EspaceSection id="reglages" title="Réglages">
-      <div>
+      <div className="panel">
         <form onSubmit={submit} onChange={touch} className="flex flex-col gap-6">
           <label className="flex flex-col gap-2 text-[0.9375rem] font-medium">
             Nom affiché

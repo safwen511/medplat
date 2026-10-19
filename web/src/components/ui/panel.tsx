@@ -49,3 +49,41 @@ export function PageStack({ children, className }: { children: ReactNode; classN
     <div className={cn("mx-auto flex w-full max-w-6xl flex-col gap-12 sm:gap-16", className)}>{children}</div>
   );
 }
+
+/**
+ * Title row of an open section (no box): small eyebrow, title, optional subtitle and action, over
+ * a hairline. Boxes are kept for heroes and forms; lists and grids sit on the page itself.
+ */
+export function SectionHeader({
+  id,
+  eyebrow,
+  title,
+  subtitle,
+  action,
+  className,
+}: {
+  id?: string;
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border pb-4",
+        className,
+      )}
+    >
+      <div className="flex min-w-0 flex-col gap-1.5">
+        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        <h2 id={id} className="text-2xl leading-tight sm:text-[1.75rem]">
+          {title}
+        </h2>
+        {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ChevronDown, Flame, LayoutGrid, List, Lock, PlayCircle } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { PageStack, Panel } from "@/components/ui/panel";
 import { StatTile } from "@/components/ui/stat-tile";
 import type { CertifSummary, LessonSummary, ModuleSummary, YearIndex } from "@/lib/content/types";
+import { EASE_OUT } from "@/lib/motion";
 
 import {
   accuracy,
@@ -28,6 +30,7 @@ import {
   yearHref,
   type StudentData,
 } from "./data";
+import { ModuleTabs } from "./module-tabs";
 import { StatusControl } from "./status-control";
 
 type View = "cartes" | "liste";
@@ -224,31 +227,57 @@ function CertifCards({
       [...mod.lessons].sort((a, b) => a.order - b.order).map((lesson, position) => [lesson.id, lesson.order || position + 1]),
     ),
   );
+  const grouped = modules.length > 1;
   return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] sm:gap-4">
-      {modules.flatMap((mod) =>
-        [...mod.lessons]
-          .sort((a, b) => a.order - b.order)
-          .map((lesson) => {
-            const record = data.progress[lesson.id];
-            return (
-              <li key={lesson.id}>
-                <LessonCard
-                  lesson={{ ...lesson, order: numberOf.get(lesson.id) ?? lesson.order }}
-                  moduleTitle={mod.title}
-                  theme={theme}
-                  tier={tierOf(record?.status)}
-                  stats={lessonCardStats(byLesson.get(lesson.id) ?? [], record, data.now)}
-                  loading={data.loading}
-                  readHref={lessonHref(index, lesson)}
-                  quizHref={quizHref}
-                  onTierChange={(tier) => data.setStatus(lesson.id, statusOf(tier))}
-                />
-              </li>
-            );
-          }),
+    <div className="flex flex-col gap-10">
+      {grouped && (
+        <ModuleTabs modules={modules.map((mod) => ({ slug: mod.slug, title: mod.title, count: mod.lessons.length }))} />
       )}
-    </ul>
+      {modules.map((mod) => (
+        <section
+          key={mod.slug}
+          id={`module-${mod.slug}`}
+          data-module={mod.slug}
+          aria-label={mod.title}
+          className="flex scroll-mt-44 flex-col gap-4"
+        >
+          {grouped && (
+            <div className="flex items-baseline justify-between gap-4">
+              <h3 className="text-lg">{mod.title}</h3>
+              <span className="text-sm text-muted">{mod.lessons.length} cours</span>
+            </div>
+          )}
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] sm:gap-4">
+            {[...mod.lessons]
+              .sort((a, b) => a.order - b.order)
+              .map((lesson, position) => {
+                const record = data.progress[lesson.id];
+                return (
+                  <motion.li
+                    key={lesson.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "0px 0px -5% 0px" }}
+                    transition={{ duration: 0.45, ease: EASE_OUT, delay: (position % 4) * 0.04 }}
+                  >
+                    <LessonCard
+                      lesson={{ ...lesson, order: numberOf.get(lesson.id) ?? lesson.order }}
+                      moduleTitle={mod.title}
+                      theme={theme}
+                      tier={tierOf(record?.status)}
+                      stats={lessonCardStats(byLesson.get(lesson.id) ?? [], record, data.now)}
+                      loading={data.loading}
+                      readHref={lessonHref(index, lesson)}
+                      quizHref={quizHref}
+                      onTierChange={(tier) => data.setStatus(lesson.id, statusOf(tier))}
+                    />
+                  </motion.li>
+                );
+              })}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 }
 
