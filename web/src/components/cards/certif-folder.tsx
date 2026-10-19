@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { CertifDeck } from "./certif-deck";
+import { escapeToFlipBack, tapToFlipBack } from "./flip-back";
 import { styles } from "./styles";
 import { themeStyle } from "./themes";
 import { TIERS } from "./tiers";
@@ -67,6 +68,8 @@ export function CertifFolder({
           )}
           inert={!flipped}
           aria-hidden={!flipped}
+          onClick={(event) => tapToFlipBack(event, () => flip(false))}
+          onKeyDown={(event) => escapeToFlipBack(event, () => flip(false))}
         >
           <div className={cn(styles.hueTile, "flex items-center gap-2 px-4 py-2.5")} style={themeStyle(deck.theme)}>
             <Emblem className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />

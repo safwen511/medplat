@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import type { LessonSummary } from "@/lib/content/types";
 import { cn } from "@/lib/utils";
 
+import { escapeToFlipBack, tapToFlipBack } from "./flip-back";
 import { styles } from "./styles";
 import { CertifArt } from "./certif-art";
 import { ProgressRing } from "./progress-ring";
@@ -167,7 +168,13 @@ export function LessonCard({
           </div>
 
           {/* Back: the lesson's "dossier" ----------------------------------------------------- */}
-          <div className={cn(styles.face, styles.back)} inert={!flipped} aria-hidden={!flipped}>
+          <div
+            className={cn(styles.face, styles.back)}
+            inert={!flipped}
+            aria-hidden={!flipped}
+            onClick={(event) => tapToFlipBack(event, () => flip(false))}
+            onKeyDown={(event) => escapeToFlipBack(event, () => flip(false))}
+          >
             <TierFrame tier={tier}>
               <div className="flex h-full flex-col">
                 <div

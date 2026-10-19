@@ -1,11 +1,11 @@
 "use client";
 
-import { CalendarDays, CircleCheck, DoorOpen, Flame, ListChecks, PlayCircle, Settings, Sparkles, Target, Timer } from "lucide-react";
+import { CalendarDays, CircleCheck, DoorOpen, Flame, ListChecks, LogOut, PlayCircle, Settings, Sparkles, Target, Timer } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { leave } from "@/app/acces/actions";
+import { leave, signOut as signOutCode } from "@/app/acces/actions";
 import { Button } from "@/components/ui/button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { StatTile } from "@/components/ui/stat-tile";
@@ -167,6 +167,13 @@ function ProfilePanel({
               <Settings aria-hidden /> Réglages
             </a>
           </Button>
+          {member && (
+            <form action={signOutCode}>
+              <Button type="submit" variant="outline">
+                <LogOut aria-hidden /> Se déconnecter
+              </Button>
+            </form>
+          )}
         </div>
       </div>
 

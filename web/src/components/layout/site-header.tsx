@@ -1,11 +1,12 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
+import { LogOut, Moon, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 
+import { signOut } from "@/app/acces/actions";
 import { useProgress } from "@/lib/progress/provider";
 import { cn } from "@/lib/utils";
 
@@ -125,6 +126,21 @@ export function SiteHeader() {
               >
                 Se connecter
               </Link>
+            )}
+            {!user && profile?.onboarded && (
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  aria-label="Se déconnecter"
+                  title="Se déconnecter"
+                  className={cn(
+                    "flex size-12 items-center justify-center rounded-card text-muted transition-colors duration-150 hover:text-foreground",
+                    focusRing,
+                  )}
+                >
+                  <LogOut className="size-5" strokeWidth={1.5} aria-hidden />
+                </button>
+              </form>
             )}
           </div>
         </div>

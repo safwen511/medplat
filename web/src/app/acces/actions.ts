@@ -52,7 +52,14 @@ export async function finishWelcome(): Promise<void> {
   if (await verifyMember(store.get(ACCESS_COOKIE)?.value)) store.set(WELCOMED_COOKIE, "1", cookieOptions(ACCESS_MAX_AGE));
 }
 
-/** Ends the session on this device (another person, or another code). */
+/** Signs out on this device; it still remembers the welcome was read and the visit count. */
+export async function signOut(): Promise<void> {
+  const store = await cookies();
+  for (const name of [ACCESS_COOKIE, SESSION_COOKIE]) store.delete(name);
+  redirect("/acces");
+}
+
+/** Forgets this device's tester entirely (another person, or another code). */
 export async function leave(): Promise<void> {
   const store = await cookies();
   for (const name of [ACCESS_COOKIE, WELCOMED_COOKIE, VISITS_COOKIE, SESSION_COOKIE]) store.delete(name);
