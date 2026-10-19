@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { onProfileAnnounced } from "@/components/layout/use-profile";
 import { useProgress } from "@/lib/progress/provider";
 import type { Attempt, Highlight, LessonProgress, Profile } from "@/lib/progress/store";
 
@@ -72,6 +73,9 @@ export function useEspaceData(years: EspaceYear[]) {
       cancelled = true;
     };
   }, [store, ready, years]);
+
+  // Another tester signing in on this device switches the profile after load.
+  useEffect(() => onProfileAnnounced((profile) => setData((current) => ({ ...current, profile }))), []);
 
   const saveProfile = useCallback(
     async (profile: Profile) => {

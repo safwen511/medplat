@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { onProfileAnnounced } from "@/components/layout/use-profile";
 import type { CertifSummary, LessonSummary, YearIndex } from "@/lib/content/types";
 import { useProgress } from "@/lib/progress/provider";
 import type { Attempt, LessonProgress, LessonStatus, Profile } from "@/lib/progress/store";
@@ -122,6 +123,9 @@ export function useStudentData(index: YearIndex): StudentData {
       cancelled = true;
     };
   }, [store, ready, index, lessons]);
+
+  // The profile can change after load (another tester signed in on this device, settings saved).
+  useEffect(() => onProfileAnnounced((profile) => setState((current) => ({ ...current, profile }))), []);
 
   const setStatus = useCallback(
     async (lessonId: string, status: LessonStatus | null) => {
