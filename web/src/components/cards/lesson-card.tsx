@@ -120,7 +120,7 @@ export function LessonCard({
                 onClick={() => flip(true)}
                 className="flex h-full w-full flex-col text-left focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-inset"
               >
-                <CertifArt theme={theme} muted={!lesson.available} className="h-[58%] w-full shrink-0">
+                <CertifArt theme={theme} variant={lesson.order} muted={!lesson.available} className="h-[58%] w-full shrink-0">
                   <span className="absolute top-2 left-2 rounded-md bg-black/30 px-1.5 py-0.5 text-[11px] leading-none font-semibold text-white tabular-nums backdrop-blur-sm">
                     {lesson.order}
                   </span>

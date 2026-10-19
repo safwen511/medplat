@@ -33,6 +33,48 @@ export function EcgTrace({ className }: { className?: string }) {
   );
 }
 
+const DOTS = {
+  backgroundImage: "radial-gradient(rgb(255 255 255 / 0.14) 1px, transparent 1.5px)",
+  backgroundSize: "12px 12px",
+};
+
+/** Smooth wave trace (respiratory / EEG feel). Decorative. */
+function WaveTrace({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 200 60" preserveAspectRatio="none" className={cn("pointer-events-none absolute inset-x-0", className)} aria-hidden>
+      <path
+        d="M0 30 C 20 6, 30 6, 50 30 S 80 54, 100 30 S 130 6, 150 30 S 180 54, 200 30"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+/** Concentric arcs from a corner. Decorative. */
+function Arcs({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" className={cn("pointer-events-none absolute", className)} aria-hidden>
+      {[30, 48, 66, 84].map((r) => (
+        <circle key={r} cx="0" cy="100" r={r} fill="none" stroke="currentColor" strokeWidth="0.8" />
+      ))}
+    </svg>
+  );
+}
+
+/**
+ * Composition variants so neighbouring course cards of one certif don't look identical: the
+ * pattern, the trace, the watermark corner and a small hue shift change; identity stays.
+ */
+const VARIANTS = [
+  { hueShift: 0, pattern: GRID, watermark: "-right-6 -bottom-6 -rotate-12", trace: "ecg" },
+  { hueShift: 10, pattern: DOTS, watermark: "-left-6 -top-6 rotate-12", trace: "wave" },
+  { hueShift: -10, pattern: GRID, watermark: "-left-8 -bottom-8 rotate-6", trace: "arcs" },
+  { hueShift: 18, pattern: DOTS, watermark: "-right-8 -top-8 -rotate-6", trace: "ecg-low" },
+] as const;
+
 /**
  * Card illustration: the certif's hue as a gradient, a fine grid, an ECG trace and the specialty
  * emblem in a ring, plus a large faint watermark of the same emblem. Children overlay the art
@@ -42,26 +84,29 @@ export function CertifArt({
   theme,
   muted = false,
   emblemSize = 34,
+  variant = 0,
   className,
   children,
 }: {
   theme: CertifTheme;
   muted?: boolean;
+  /** Any integer (e.g. the course number); picks one of the composition variants. */
+  variant?: number;
   emblemSize?: number;
   className?: string;
   children?: ReactNode;
 }) {
   const Emblem = theme.emblem;
+  const look = VARIANTS[Math.abs(Math.trunc(variant)) % VARIANTS.length];
   return (
-    <div className={cn("relative", className)} style={themeStyle(theme)}>
+    <div className={cn("relative", className)} style={themeStyle({ ...theme, hue: theme.hue + look.hueShift })}>
       <div className={cn(styles.art, "absolute inset-0")} data-muted={muted} aria-hidden>
-        <div className="absolute inset-0" style={GRID} />
-        <Emblem
-          className="absolute -right-6 -bottom-6 size-32 -rotate-12 text-white/10"
-          strokeWidth={1}
-          aria-hidden
-        />
-        <EcgTrace className="top-[52%] h-1/3 text-white/30" />
+        <div className="absolute inset-0" style={look.pattern} />
+        <Emblem className={cn("absolute size-32 text-white/10", look.watermark)} strokeWidth={1} aria-hidden />
+        {look.trace === "ecg" && <EcgTrace className="top-[52%] h-1/3 text-white/30" />}
+        {look.trace === "ecg-low" && <EcgTrace className="top-[68%] h-1/4 text-white/25" />}
+        {look.trace === "wave" && <WaveTrace className="top-[58%] h-1/4 text-white/25" />}
+        {look.trace === "arcs" && <Arcs className="bottom-0 left-0 size-full text-white/15" />}
         <div className="absolute inset-0 flex items-center justify-center">
           <span
             className={cn(
