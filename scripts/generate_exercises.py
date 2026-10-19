@@ -464,18 +464,18 @@ def main() -> int:
         if not args.yes:
             raise SystemExit("submit spends money: re-run with --yes after the owner's go.")
         run = run_for(year, args.run)
-        run.plan(
-            [
-                {
-                    "custom_id": custom_id("x2", f"{lesson_id}|{lesson_markdown(year, lesson_id)}"),
-                    "lesson_id": lesson_id,
-                }
-                for lesson_id in selected
-            ]
-        )
-        pending = [item["lesson_id"] for item in run.pending()]
+        planned = [
+            {
+                "custom_id": custom_id("x2", f"{lesson_id}|{lesson_markdown(year, lesson_id)}"),
+                "lesson_id": lesson_id,
+            }
+            for lesson_id in selected
+        ]
+        run.plan(planned)
+        only = {item["custom_id"] for item in planned}
+        pending = [item["lesson_id"] for item in run.pending(only=only)]
         check_budget(estimate_lessons(year, args.model, pending), args.max_usd)
-        print(f"submitted {run.submit(client(), params(year, args.model))}")
+        print(f"submitted {run.submit(client(), params(year, args.model), only=only)}")
         print(json.dumps(run.summary(), indent=2))
     elif args.command == "collect":
         return collect(year, args.run)

@@ -195,8 +195,13 @@ class BatchRun:
             for custom in batch["custom_ids"]
         }
 
-    def pending(self, max_attempts: int = MAX_ATTEMPTS) -> list[dict[str, Any]]:
-        """Items to submit: never attempted, or last outcome retryable and attempts remain."""
+    def pending(
+        self, max_attempts: int = MAX_ATTEMPTS, only: set[str] | None = None
+    ) -> list[dict[str, Any]]:
+        """Items to submit: never attempted, or last outcome retryable and attempts remain.
+
+        `only` restricts them to these custom_ids (items planned by an earlier, refused call stay
+        out of a scoped submission)."""
         attempts: dict[str, int] = {}
         for record in self.results():
             attempts[record["custom_id"]] = attempts.get(record["custom_id"], 0) + 1
@@ -205,7 +210,7 @@ class BatchRun:
         selected = []
         for item in self.items():
             custom = item["custom_id"]
-            if custom in flying:
+            if custom in flying or (only is not None and custom not in only):
                 continue
             if custom not in latest:
                 selected.append(item)
@@ -234,12 +239,14 @@ class BatchRun:
         build: Callable[[dict[str, Any]], dict[str, Any]],
         *,
         limit: int | None = None,
+        only: set[str] | None = None,
     ) -> list[str]:
-        """Submit pending items (at most `limit`) as one or more batches. Spends money."""
+        """Submit pending items (at most `limit`, within `only`) as batches. Spends money."""
         from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
         from anthropic.types.messages.batch_create_params import Request
 
-        selected = self.pending()[:limit] if limit is not None else self.pending()
+        pending = self.pending(only=only)
+        selected = pending[:limit] if limit is not None else pending
         submitted: list[str] = []
         chunk: list[Any] = []
         chunk_ids: list[str] = []
