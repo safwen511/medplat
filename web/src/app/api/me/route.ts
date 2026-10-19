@@ -10,7 +10,7 @@ export async function GET() {
   return Response.json(
     {
       gate: true,
-      member: { firstName: member.firstName, gender: member.gender, year: member.year },
+      member: { firstName: member.firstName, gender: member.gender, year: member.year, role: member.role },
       visits: Number(store.get(VISITS_COOKIE)?.value) || 1,
     },
     { headers: { "Cache-Control": "no-store" } },

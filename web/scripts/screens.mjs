@@ -16,7 +16,7 @@ const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const vip = readFileSync(path.join(import.meta.dirname, "..", "..", "vip"), "utf-8")
   .split("\n")
   .filter((line) => line && !line.startsWith("#"));
-const NAMES = { ala: "Ala Arfa", salsabil: "Salsabil Yahyaoui", owner: "Safwen" };
+const NAMES = { ala: "Ala Arfa", salsabil: "Salsabil Yahyaoui", owner: "Safwen", marwen: "Marwen Yahyaoui" };
 const line = vip.find((entry) => entry.startsWith(NAMES[who]));
 if (!line) throw new Error(`no code for ${who}`);
 const code = line.split(" · ").at(-1).trim();
@@ -46,7 +46,8 @@ try {
           if (!(await next.count())) break;
           await next.click();
         }
-        await Promise.all([page.waitForURL(/\/sfax\//), page.getByRole("button", { name: "Commencer" }).click()]);
+        const finish = page.getByRole("button", { name: /^(Commencer|DCEM2)/ }).first();
+        await Promise.all([page.waitForURL(/\/sfax\//), finish.click()]);
         await page.waitForLoadState("networkidle");
         continue;
       }

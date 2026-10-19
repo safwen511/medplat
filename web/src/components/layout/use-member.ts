@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 export interface Me {
   /** Whether beta access codes are on (otherwise the site is open, demo mode). */
   gate: boolean;
-  member: { firstName: string; gender: "m" | "f"; year: string } | null;
+  member: { firstName: string; gender: "m" | "f"; year: string; role?: "doctor" } | null;
   visits?: number;
 }
 

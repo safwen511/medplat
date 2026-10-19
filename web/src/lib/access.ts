@@ -9,6 +9,8 @@ export interface Member {
   firstName: string;
   gender: "m" | "f";
   year: "dcem1" | "dcem2";
+  /** A guest doctor (project presentation instead of the student tour). */
+  role?: "doctor";
 }
 
 interface Entry extends Member {

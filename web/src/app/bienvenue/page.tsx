@@ -17,22 +17,36 @@ async function WelcomeForSession({ searchParams }: { searchParams: PageProps<"/b
   const next =
     typeof suite === "string" && suite.startsWith("/") && !suite.startsWith("//") ? suite : `/sfax/${member.year}`;
 
-  const index = yearIndex("sfax", member.year);
-  const ready = (index?.certifs ?? []).flatMap((certif) =>
-    certif.modules.flatMap((module) => module.lessons).filter((lesson) => lesson.available),
-  );
-  const certifs = (index?.certifs ?? [])
-    .filter((certif) => certif.modules.some((module) => module.lessons.some((lesson) => lesson.available)))
-    .map((certif) => certif.title.replace(/^Certificat (intégré )?(de |d'|des )?/i, ""));
+  const years = (["dcem2", "dcem1"] as const).flatMap((year) => {
+    const index = yearIndex("sfax", year);
+    if (!index) return [];
+    const certifs = index.certifs.filter((certif) =>
+      certif.modules.some((module) => module.lessons.some((lesson) => lesson.available)),
+    );
+    const ready = certifs.flatMap((certif) =>
+      certif.modules.flatMap((module) => module.lessons).filter((lesson) => lesson.available),
+    );
+    return [
+      {
+        year,
+        yearLabel: YEAR_LABEL[year],
+        lessons: ready.length,
+        exercises: ready.reduce((sum, lesson) => sum + lesson.exerciseCount, 0),
+        certifs: certifs.map((certif) => certif.title.replace(/^Certificat (intégré )?(de |d'|des )?/i, "")),
+      },
+    ];
+  });
+  const own = years.find((item) => item.year === member.year);
   const stats = {
-    lessons: ready.length,
-    exercises: ready.reduce((sum, lesson) => sum + lesson.exerciseCount, 0),
-    certifs,
+    lessons: own?.lessons ?? 0,
+    exercises: own?.exercises ?? 0,
+    certifs: own?.certifs ?? [],
     yearLabel: YEAR_LABEL[member.year],
+    years,
   };
   return (
     <WelcomeSlides
-      member={{ firstName: member.firstName, gender: member.gender, year: member.year }}
+      member={{ firstName: member.firstName, gender: member.gender, year: member.year, role: member.role }}
       stats={stats}
       next={next}
     />

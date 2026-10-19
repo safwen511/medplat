@@ -1,6 +1,18 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, BookOpen, Flag, Layers, Lightbulb, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Flag,
+  HeartHandshake,
+  Layers,
+  Lightbulb,
+  ShieldCheck,
+  Sparkles,
+  Stethoscope,
+  TrendingUp,
+} from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
@@ -14,6 +26,16 @@ export interface WelcomeMember {
   firstName: string;
   gender: "m" | "f";
   year: "dcem1" | "dcem2";
+  /** A guest doctor gets the project presentation instead of the student tour. */
+  role?: "doctor";
+}
+
+export interface YearStats {
+  year: "dcem1" | "dcem2";
+  yearLabel: string;
+  lessons: number;
+  exercises: number;
+  certifs: string[];
 }
 
 export interface WelcomeStats {
@@ -21,6 +43,8 @@ export interface WelcomeStats {
   exercises: number;
   certifs: string[];
   yearLabel: string;
+  /** Every year, for the doctor's presentation. */
+  years: YearStats[];
 }
 
 interface Slide {
@@ -73,8 +97,7 @@ function slides(member: WelcomeMember, stats: WelcomeStats): Slide[] {
             <StatTile value={stats.certifs.length} label="certifs" />
           </div>
           <p>
-            {stats.yearLabel} : {stats.certifs.join(", ")}. Les cours choisis sont ceux qui tombent le plus souvent à
-            l&apos;examen.
+            {stats.yearLabel} : {stats.certifs.join(", ")}. Les cours qui manquent encore arrivent par vagues.
           </p>
         </div>
       ),
@@ -84,7 +107,7 @@ function slides(member: WelcomeMember, stats: WelcomeStats): Slide[] {
       title: "Ce qui n'est pas encore là.",
       body: (
         <ul className="mx-auto flex max-w-2xl flex-col gap-2 text-left">
-          <li>— La plupart des cours : ils arrivent par vagues, les plus importants d&apos;abord.</li>
+          <li>— Quelques cours et une partie des exercices : ils arrivent par vagues.</li>
           <li>— Les comptes : ta progression reste sur cet appareil pour l&apos;instant.</li>
           <li>— Connecter : les amis, leur progression, les défis.</li>
           <li>— La relecture par un médecin : tout est en brouillon, signale chaque erreur.</li>
@@ -104,8 +127,114 @@ function slides(member: WelcomeMember, stats: WelcomeStats): Slide[] {
   ];
 }
 
+/** For a guest doctor (the owner's brother): what MedPlat is, how rigorous it is, why it matters. */
+function doctorSlides(member: WelcomeMember, stats: WelcomeStats): Slide[] {
+  const lessons = stats.years.reduce((sum, year) => sum + year.lessons, 0);
+  const exercises = stats.years.reduce((sum, year) => sum + year.exercises, 0);
+  const certifs = stats.years.reduce((sum, year) => sum + year.certifs.length, 0);
+  return [
+    {
+      icon: <Stethoscope aria-hidden />,
+      title: `Bienvenu ${member.firstName}.`,
+      body: (
+        <p>
+          Je t&apos;ai préparé un accès à part. Prends cinq minutes : je veux te montrer ce que je construis, et
+          pourquoi j&apos;ai besoin de ton regard de médecin.
+        </p>
+      ),
+    },
+    {
+      icon: <Layers aria-hidden />,
+      title: "Le problème.",
+      body: (
+        <p>
+          Un étudiant en médecine révise avec des polycopiés, des diapositives, des résumés qui circulent et des
+          sujets d&apos;examen éparpillés. Rien ne relie tout ça, rien ne lui dit ce qu&apos;il maîtrise vraiment, et
+          presque rien n&apos;est pensé pour la tablette sur laquelle il révise.
+        </p>
+      ),
+    },
+    {
+      icon: <BookOpen aria-hidden />,
+      title: "MedPlat.",
+      body: (
+        <p>
+          Chaque cours est reconstruit à partir des documents officiels de la faculté, et chaque phrase renvoie à
+          la page d&apos;où elle vient. Autour : des exercices de tous les formats avec indices et explications,
+          un suivi de progression, et des cours rangés comme des dossiers de patients.
+        </p>
+      ),
+    },
+    {
+      icon: <Sparkles aria-hidden />,
+      title: "Déjà construit.",
+      body: (
+        <div className="flex flex-col gap-6">
+          <div className="mx-auto grid w-full max-w-xl grid-cols-3 gap-3 text-left">
+            <StatTile value={lessons} label="cours" />
+            <StatTile value={exercises.toLocaleString("fr-FR")} label="exercices" />
+            <StatTile value={certifs} label="certifs" />
+          </div>
+          <p>
+            {stats.years.map((year) => year.yearLabel).join(" et ")}, faculté de médecine de Sfax. Construit en
+            quelques semaines, avec un coût de production de quelques dizaines de centimes par cours.
+          </p>
+        </div>
+      ),
+    },
+    {
+      icon: <ShieldCheck aria-hidden />,
+      title: "La rigueur d'abord.",
+      body: (
+        <p>
+          Chaque chiffre d&apos;un cours est vérifié automatiquement sur la page citée ; une question dont un
+          chiffre ne se retrouve pas dans la source est rejetée. Mais aucun médecin n&apos;a encore relu le
+          contenu. C&apos;est la pièce qui manque, et c&apos;est là que tu entres.
+        </p>
+      ),
+    },
+    {
+      icon: <HeartHandshake aria-hidden />,
+      title: "Ce que je te demande.",
+      body: (
+        <ul className="mx-auto flex max-w-2xl flex-col gap-3 text-left">
+          <li>— Ouvre quelques cours de ta spécialité et touche « Signaler une erreur » dès que quelque chose cloche.</li>
+          <li>— Dis-moi ce qui manque, ce qui est dangereux, ce qu&apos;un étudiant devrait voir autrement.</li>
+          <li>— Parle-en à un professeur ou à des résidents : il nous faut un comité de relecture.</li>
+          <li>— Crois au projet avec moi : c&apos;est ce qui me fera passer de prototype à produit.</li>
+        </ul>
+      ),
+    },
+    {
+      icon: <TrendingUp aria-hidden />,
+      title: "Pourquoi ça peut devenir grand.",
+      body: (
+        <ul className="mx-auto flex max-w-2xl flex-col gap-3 text-left">
+          <li>— Quatre facultés de médecine en Tunisie, puis le Maghreb francophone : mêmes cours, même langue.</li>
+          <li>— Un modèle simple : gratuit pour commencer, un abonnement pour les séries illimitées, les examens
+            blancs et le suivi ; des offres pour les facultés et les préparations.</li>
+          <li>— Ajouter une faculté ou une année coûte peu : la chaîne de production est déjà là.</li>
+          <li>— Un contenu relu par des médecins, c&apos;est ce que personne d&apos;autre ne peut copier vite.</li>
+        </ul>
+      ),
+    },
+    {
+      icon: <Flag aria-hidden />,
+      title: "La suite.",
+      body: (
+        <p>
+          Les comptes et la synchronisation, tous les pôles, la relecture médicale, puis un lancement auprès des
+          étudiants de Sfax. Explore librement les deux années ; tes remarques passent en premier.
+          <span className="mt-6 block font-heading text-foreground">— Safwen</span>
+        </p>
+      ),
+    },
+  ];
+}
+
 export function WelcomeSlides({ member, stats, next }: { member: WelcomeMember; stats: WelcomeStats; next: string }) {
-  const all = slides(member, stats);
+  const doctor = member.role === "doctor";
+  const all = doctor ? doctorSlides(member, stats) : slides(member, stats);
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [pending, setPending] = useState(false);
@@ -123,19 +252,19 @@ export function WelcomeSlides({ member, stats, next }: { member: WelcomeMember; 
     [all.length],
   );
 
-  const start = async () => {
+  const start = async (year: WelcomeMember["year"] = member.year) => {
     setPending(true);
     const current = await store.profile();
     await store.saveProfile({
       displayName: current?.displayName || member.firstName,
       faculty: "sfax",
-      year: member.year,
+      year,
       examDate: current?.examDate ?? null,
       onboarded: true,
       dailyGoal: current?.dailyGoal ?? 20,
     });
     await finishWelcome();
-    router.push(next);
+    router.push(doctor ? `/sfax/${year}` : next);
   };
 
   useEffect(() => {
@@ -197,7 +326,7 @@ export function WelcomeSlides({ member, stats, next }: { member: WelcomeMember; 
         </AnimatePresence>
       </div>
 
-      <footer className="flex flex-col items-center gap-6 px-6 py-8">
+      <footer className="sticky bottom-0 flex flex-col items-center gap-4 bg-background/85 px-6 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:gap-6 sm:py-8">
         <div className="flex gap-2" role="tablist" aria-label="Étapes de l'accueil">
           {all.map((_, dot) => (
             <button
@@ -219,8 +348,23 @@ export function WelcomeSlides({ member, stats, next }: { member: WelcomeMember; 
           <Button variant="ghost" size="lg" onClick={() => go(-1)} disabled={index === 0}>
             <ArrowLeft aria-hidden /> Retour
           </Button>
-          {last ? (
-            <Button size="lg" onClick={start} disabled={pending} className="shadow-glow">
+          {last && doctor ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              {stats.years.map((year, position) => (
+                <Button
+                  key={year.year}
+                  size="lg"
+                  variant={position === 0 ? "primary" : "outline"}
+                  onClick={() => start(year.year)}
+                  disabled={pending}
+                  className={position === 0 ? "shadow-glow" : undefined}
+                >
+                  {year.yearLabel} <ArrowRight aria-hidden />
+                </Button>
+              ))}
+            </div>
+          ) : last ? (
+            <Button size="lg" onClick={() => start()} disabled={pending} className="shadow-glow">
               {pending ? "Ouverture…" : "Commencer"} <ArrowRight aria-hidden />
             </Button>
           ) : (

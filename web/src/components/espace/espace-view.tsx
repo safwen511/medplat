@@ -131,7 +131,7 @@ function ProfilePanel({
             {member && (
               <span className="mt-1 inline-flex items-center gap-1.5 self-start rounded-full bg-primary-soft px-3 py-1 text-sm text-primary">
                 <Sparkles className="size-3.5" aria-hidden />
-                {member.gender === "f" ? "Testeuse" : "Testeur"} bêta
+                {member.role === "doctor" ? "Invité · médecin" : member.gender === "f" ? "Testeuse bêta" : "Testeur bêta"}
               </span>
             )}
           </div>
