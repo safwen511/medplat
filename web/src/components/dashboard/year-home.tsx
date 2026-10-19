@@ -186,6 +186,7 @@ function Folder({ index, certif, data }: { index: YearIndex; certif: CertifSumma
     <CertifFolder
       href={certifHref(index, certif)}
       quizHref={certifQuizHref(index, certif)}
+      exercises={lessons.reduce((sum, lesson) => sum + (lesson.available ? lesson.exerciseCount : 0), 0)}
       title={shortCertifTitle(certif.title)}
       fullTitle={certif.title}
       pole={certif.pole}

@@ -19,8 +19,9 @@ import { TIERS } from "./tiers";
  */
 export function CertifFolder({
   quizHref,
+  exercises,
   ...deck
-}: Omit<ComponentProps<typeof CertifDeck>, "onOpen"> & { quizHref: string }) {
+}: Omit<ComponentProps<typeof CertifDeck>, "onOpen"> & { quizHref: string; exercises: number }) {
   const [flipped, setFlipped] = useState(false);
   const backRef = useRef<HTMLButtonElement>(null);
   const frontRef = useRef<HTMLDivElement>(null);
@@ -94,7 +95,7 @@ export function CertifFolder({
                 <FolderOpen aria-hidden /> Ouvrir
               </Link>
             </Button>
-            {deck.available > 0 ? (
+            {exercises > 0 ? (
               <Button asChild className="h-12 flex-1 shadow-glow">
                 <Link href={quizHref}>
                   <PlayCircle aria-hidden /> Quiz

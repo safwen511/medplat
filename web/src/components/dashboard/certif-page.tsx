@@ -104,7 +104,7 @@ export function CertifPage({ index, certif }: { index: YearIndex; certif: Certif
                 </h1>
               </div>
             </div>
-            {ready.length > 0 && (
+            {ready.some((lesson) => lesson.exerciseCount > 0) && (
               <Button asChild size="lg" className="self-start shadow-glow sm:self-center">
                 <Link href={certifQuizHref(index, certif)}>
                   <PlayCircle aria-hidden /> Quiz sur ce certif
