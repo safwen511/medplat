@@ -21,13 +21,17 @@ async function LessonPageContent(props: PageProps<"/[faculty]/[year]/lecon/[less
   const lessonId = decodeURIComponent(raw);
   const content = lesson(faculty, year, lessonId);
   if (!content) notFound();
+  const all = exercises(faculty, year, lessonId)?.items ?? [];
   // End-of-lesson check: the first five exercises, high-yield ones first.
-  const items = [...(exercises(faculty, year, lessonId)?.items ?? [])]
-    .sort((a, b) => Number(b.highYield) - Number(a.highYield))
-    .slice(0, 5);
+  const items = [...all].sort((a, b) => Number(b.highYield) - Number(a.highYield)).slice(0, 5);
   return (
     <div className="flex flex-col gap-20">
-      <LessonView lesson={{ ...content, glossary: glossary(faculty, year, lessonId) }} faculty={faculty} year={year} />
+      <LessonView
+        lesson={{ ...content, glossary: glossary(faculty, year, lessonId) }}
+        faculty={faculty}
+        year={year}
+        exercises={all}
+      />
       {items.length > 0 && (
         <section aria-labelledby="teste-toi" className="mx-auto w-full max-w-[40rem] border-t border-border pt-10">
           <h2 id="teste-toi" className="mb-8 text-[1.625rem] sm:text-[1.75rem]">

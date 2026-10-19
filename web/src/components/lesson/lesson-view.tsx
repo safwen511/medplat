@@ -8,9 +8,9 @@ import Link from "next/link";
 import { CertifEmblem } from "@/components/cards/certif-art";
 import { certifTheme } from "@/components/cards/themes";
 
-import type { Lesson } from "@/lib/content/types";
+import type { Exercise, Lesson } from "@/lib/content/types";
 
-import { CITATION, STUDENT_ROLES } from "./citations";
+import { CITATION, parseCitation, STUDENT_ROLES } from "./citations";
 import { FigureGallery } from "./figures";
 import { FoldableSection } from "./foldable-section";
 import { ReportErrorButton, StatusTracker } from "./lesson-actions";
@@ -24,6 +24,8 @@ import { LessonToolbar } from "./marks/toolbar";
 import { ToolsProvider } from "./marks/tools";
 import { ReaderSettingsButton } from "./reader-settings-panel";
 import { ReadingProgress } from "./reading-progress";
+import { RecallMode } from "./recall-mode";
+import { SectionCheck } from "./section-check";
 import { headingClass, SectionHeading, sectionSpacing } from "./heading";
 import { ReaderSurface } from "./reader-surface";
 import { SourcesToggle } from "./sources-toggle";
@@ -32,6 +34,44 @@ import { MarginToc, PlanBlock, PlanButton, type TocItem } from "./toc";
 const ARTICLE_ID = "lecon";
 
 const linkRow = "flex flex-wrap items-center gap-x-5 font-sans";
+
+/** "S1:45"-style keys of every page a block of markdown cites (long ranges capped). */
+function citedPages(markdown: string): Set<string> {
+  const pages = new Set<string>();
+  for (const match of markdown.matchAll(CITATION))
+    for (const ref of parseCitation(match[1]))
+      for (const [from, to] of ref.ranges)
+        for (let page = from; page <= Math.min(to, from + 30); page++) pages.add(`${ref.source}:${page}`);
+  return pages;
+}
+
+function sectionMarkdown(section: LessonSection): string {
+  return [section.body, ...section.children.map(sectionMarkdown)].join("\n");
+}
+
+/**
+ * Questions for the end of each part (H2): each exercise goes to the part whose cited pages
+ * overlap its own the most; at most three per part.
+ */
+function checksByPart(sections: LessonSection[], exercises: Exercise[]): Map<string, Exercise[]> {
+  const parts = sections
+    .filter((section) => section.level <= 2 && !section.folded)
+    .map((section) => ({ id: section.id, pages: citedPages(sectionMarkdown(section)) }));
+  const result = new Map<string, Exercise[]>();
+  for (const exercise of exercises) {
+    const pages = citedPages(exercise.citations);
+    let best: { id: string; score: number } | null = null;
+    for (const part of parts) {
+      let score = 0;
+      for (const page of pages) if (part.pages.has(page)) score++;
+      if (score > 0 && (!best || score > best.score)) best = { id: part.id, score };
+    }
+    if (!best) continue;
+    const list = result.get(best.id) ?? [];
+    if (list.length < 3) result.set(best.id, [...list, exercise]);
+  }
+  return result;
+}
 
 /** About 200 words a minute for dense medical French, citations left out. */
 function readingMinutes(markdown: string): number {
@@ -44,7 +84,20 @@ function HighYieldMarker() {
   return <p className="mt-1 font-sans text-sm text-highyield">Souvent à l&apos;examen</p>;
 }
 
-function SectionBlock({ section, lesson }: { section: LessonSection; lesson: Lesson }) {
+function SectionBlock({
+  section,
+  lesson,
+  checks,
+  faculty,
+  year,
+}: {
+  section: LessonSection;
+  lesson: Lesson;
+  checks: Map<string, Exercise[]>;
+  faculty: string;
+  year: string;
+}) {
+  const partChecks = checks.get(section.id);
   const title = <InlineMarkdown markdown={section.title.replace(CITATION, "").trim()} lesson={lesson} />;
   const marker = section.highYield ? <HighYieldMarker /> : null;
   const figures = sectionFigures(section.body, lesson);
@@ -53,8 +106,9 @@ function SectionBlock({ section, lesson }: { section: LessonSection; lesson: Les
       <LessonMarkdown markdown={section.body} lesson={lesson} />
       {figures.length > 0 && <FigureGallery figures={figures} />}
       {section.children.map((child) => (
-        <SectionBlock key={child.id} section={child} lesson={lesson} />
+        <SectionBlock key={child.id} section={child} lesson={lesson} checks={checks} faculty={faculty} year={year} />
       ))}
+      {partChecks && partChecks.length >= 2 && <SectionCheck exercises={partChecks} faculty={faculty} year={year} />}
     </>
   );
 
@@ -107,8 +161,20 @@ function SourceList({ lesson }: { lesson: Lesson }) {
   );
 }
 
-export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty: string; year: string }) {
+export function LessonView({
+  lesson,
+  faculty,
+  year,
+  exercises = [],
+}: {
+  lesson: Lesson;
+  faculty: string;
+  year: string;
+  /** All of the lesson's exercises: 2–3 close each part they cite. */
+  exercises?: Exercise[];
+}) {
   const parsed = parseLesson(lesson.markdown);
+  const checks = checksByPart(parsed.sections, exercises);
   const toc: TocItem[] = parsed.sections
     .filter((section) => section.level <= 2)
     .map((section) => ({
@@ -200,7 +266,14 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
             >
               <LessonMarkdown markdown={parsed.preface} lesson={lesson} />
               {parsed.sections.map((section) => (
-                <SectionBlock key={section.id} section={section} lesson={lesson} />
+                <SectionBlock
+                  key={section.id}
+                  section={section}
+                  lesson={lesson}
+                  checks={checks}
+                  faculty={faculty}
+                  year={year}
+                />
               ))}
             </MarkedBody>
 
@@ -224,6 +297,7 @@ export function LessonView({ lesson, faculty, year }: { lesson: Lesson; faculty:
         </ReaderSurface>
         <LessonToolbar lessonId={lesson.id} hasGlossary={(lesson.glossary?.length ?? 0) > 0} />
       {lesson.glossary?.length ? <GlossaryLens entries={lesson.glossary} /> : null}
+      <RecallMode lessonId={lesson.id} title={lesson.title} href={`/${faculty}/${year}/lecon/${encodeURIComponent(lesson.id)}`} />
         <ReaderSettingsButton />
       </ToolsProvider>
     </LessonProvider>

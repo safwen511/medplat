@@ -25,6 +25,7 @@ import { EmptyState, EspaceSection, textLink } from "./section";
 import { SettingsForm } from "./settings-form";
 import { dayKey, daysUntil, formatExamDate, formatMonth, formatSeconds, median, streak } from "./stats";
 import { lessonHref, shortCertifTitle, type EspaceYear } from "./types";
+import { ReviewToday } from "./review-today";
 import { useEspaceData } from "./use-espace-data";
 
 const DEFAULT_GOAL = 20;
@@ -51,6 +52,8 @@ export function EspaceView({ years }: { years: EspaceYear[] }) {
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-12 sm:gap-16">
       <ProfilePanel profile={profile} year={year} name={name} now={now} me={me} />
+
+      <ReviewToday years={years} attempts={data.attempts} now={now} />
 
       {year ? (
         <>

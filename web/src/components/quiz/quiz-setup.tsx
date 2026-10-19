@@ -60,15 +60,18 @@ function QuizSetupInner({ index, pool }: { index: YearIndex; pool: Exercise[] })
   const { store } = useProgress();
   const [view, setView] = useState<View>({ kind: "setup" });
   const rootRef = useRef<HTMLDivElement>(null);
-  const requested = useSearchParams().get("certif");
+  const params = useSearchParams();
+  const requested = params.get("certif");
+  // From "À revoir aujourd'hui": ?lecon=<id>&erreurs=1 preselects a lesson and its mistakes.
+  const requestedLesson = params.get("lecon");
   const [certifs, setCertifs] = useState<string[]>(() =>
     requested && index.certifs.some((certif) => certif.slug === requested) ? [requested] : [],
   );
-  const [lessons, setLessons] = useState<string[]>([]);
+  const [lessons, setLessons] = useState<string[]>(() => (requestedLesson ? [requestedLesson] : []));
   const [types, setTypes] = useState<Exercise["type"][]>([]);
   const [count, setCount] = useState<(typeof COUNTS)[number]>(10);
   const [highYieldOnly, setHighYieldOnly] = useState(false);
-  const [mistakesOnly, setMistakesOnly] = useState(false);
+  const [mistakesOnly, setMistakesOnly] = useState(() => params.get("erreurs") === "1");
   const [mistakes, setMistakes] = useState<Set<string>>(new Set());
   const [showLessons, setShowLessons] = useState(false);
 

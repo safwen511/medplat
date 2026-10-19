@@ -408,3 +408,31 @@ body {
     background-color: var(--primary-soft);
   }
 }
+
+/* Recall mode: key terms are blanks until tapped. */
+[data-recall="on"] strong {
+  border-radius: 6px;
+  transition: color var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out);
+}
+[data-recall="on"] strong:not([data-recall]):not(h2 strong, h3 strong, h4 strong, th strong) {
+  cursor: pointer;
+  color: transparent;
+  background: var(--surface-muted);
+  box-shadow: inset 0 -2px 0 var(--border-strong);
+}
+[data-recall="on"] strong[data-recall="open"] {
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+[data-recall="on"] strong[data-recall="known"] {
+  background: var(--correct-soft);
+}
+[data-recall="on"] strong[data-recall="unknown"] {
+  background: var(--highyield-soft);
+}
+.recall-bar {
+  top: calc(var(--header-h) + 0.75rem);
+  transition: translate var(--dur-base) var(--ease-out);
+}
+:root[data-chrome="hidden"] .recall-bar {
+  translate: 0 calc(-1 * var(--header-h));
+}
